@@ -4,6 +4,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>终末地基质规划器 (Endfield Essence Planner)</title>
+    <meta
+      name="description"
+      content="终末地基质规划器：根据附加/技能属性池与锁定规则，自动计算多武器共刷方案，提供基础属性冲突提示与可刷数量参考，适配移动端。"
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://end.canmoe.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="终末地基质规划器 (Endfield Essence Planner)" />
+    <meta
+      property="og:description"
+      content="终末地基质规划器：根据附加/技能属性池与锁定规则，自动计算多武器共刷方案，提供基础属性冲突提示与可刷数量参考，适配移动端。"
+    />
+    <meta property="og:url" content="https://end.canmoe.com/" />
+    <meta property="og:site_name" content="终末地基质规划器" />
+    <meta name="twitter:card" content="summary" />
     <link rel="icon" href="./favicon.ico" sizes="any" />
     <link rel="icon" href="./favicon-002.ico" sizes="32x32" />
     <link rel="icon" href="./favicon-003.ico" sizes="48x48" />
@@ -32,8 +47,44 @@
         <div class="hero-actions">
           <button class="about-button notice-button" @click="openNotice">公告</button>
           <button class="about-button" @click="showAbout = true">关于</button>
+          <div class="secondary-menu">
+            <button class="ghost-button menu-toggle" @click="showSecondaryMenu = !showSecondaryMenu">
+              更多设置
+            </button>
+            <div v-if="showSecondaryMenu" class="secondary-panel">
+              <div class="secondary-item">
+                <div class="secondary-label">性能模式</div>
+                <select class="secondary-select" :value="perfPreference" @change="setPerfMode($event.target.value)">
+                  <option value="auto">自动</option>
+                  <option value="standard">标准</option>
+                  <option value="low">低GPU</option>
+                </select>
+                <div v-if="perfPreference === 'auto'" class="secondary-hint">
+                  当前自动：{{ lowGpuEnabled ? "低GPU" : "标准" }}
+                </div>
+              </div>
+              <div class="secondary-item secondary-desc">
+                自动模式会根据渲染性能临时切换低GPU模式。
+              </div>
+            </div>
+          </div>
         </div>
       </header>
+      <div v-if="lowGpuEnabled" class="perf-status">
+        <div class="perf-status-text">
+          低GPU模式已开启{{ perfPreference === "auto" ? "（自动）" : "（手动）" }}
+        </div>
+        <button class="ghost-button" @click.stop="showSecondaryMenu = true">更多设置</button>
+      </div>
+      <div v-if="showPerfNotice" class="perf-notice">
+        <div class="perf-notice-text">
+          检测到当前渲染性能较低，已自动切换到低GPU模式以提升滚动流畅度（可在“更多设置”调整）。
+        </div>
+        <div class="perf-notice-actions">
+          <button class="ghost-button" @click="setPerfMode('standard')">恢复效果</button>
+          <button class="about-button perf-keep" @click="setPerfMode('low')">保持低GPU</button>
+        </div>
+      </div>
 
       <main class="layout">
         <div class="mobile-tabs">
@@ -72,7 +123,7 @@
               :class="{ 'is-active': showWeaponAttrs }"
               @click="showWeaponAttrs = !showWeaponAttrs"
             >
-              {{ showWeaponAttrs ? "隐藏属性" : "显示属性" }}
+              {{ showWeaponAttrs ? "隐藏属性/排除/备注管理" : "显示属性/排除/备注管理" }}
             </button>
             <button class="ghost-button" @click="showFilterPanel = !showFilterPanel">
               {{ showFilterPanel ? "折叠属性筛选" : "展开属性筛选" }}
@@ -85,7 +136,6 @@
               清空属性筛选
             </button>
           </div>
-
           <div class="filter-panel" :class="{ 'is-collapsed': !showFilterPanel }">
             <div class="filter-group">
               <div class="filter-title">基础属性</div>
@@ -133,8 +183,15 @@
 
           <div class="tag-row">
             <span v-if="!selectedNames.length" class="tag">未选择任何武器</span>
-            <span v-for="weapon in selectedWeapons" :key="weapon.name" class="tag">
+            <span
+              v-for="weapon in selectedWeaponRows"
+              :key="weapon.name"
+              class="tag"
+              :class="{ 'is-excluded': weapon.isExcluded }"
+              :title="weapon.note ? `备注：${weapon.note}` : ''"
+            >
               {{ weapon.name }}
+              <span v-if="weapon.isExcluded" class="tag-note">排除</span>
               <button @click.stop="toggleWeapon(weapon)">✕</button>
             </span>
           </div>
@@ -146,6 +203,7 @@
               class="weapon-item"
               :class="{
                 'is-selected': selectedNameSet.has(weapon.name),
+                'is-excluded': isExcluded(weapon.name),
                 'rarity-6': weapon.rarity === 6,
                 'rarity-5': weapon.rarity === 5,
               }"
@@ -170,7 +228,10 @@
               v-for="weapon in filteredWeapons"
               :key="weapon.name"
               class="scheme-weapon-item weapon-attr-item"
-              :class="{ 'is-selected': selectedNameSet.has(weapon.name) }"
+              :class="{
+                'is-selected': selectedNameSet.has(weapon.name),
+                'is-excluded': isExcluded(weapon.name),
+              }"
               @click="toggleWeapon(weapon)"
             >
               <div class="scheme-weapon-title">
@@ -186,6 +247,7 @@
                   {{ weapon.rarity }}★
                 </span>
                 <span class="badge" v-if="selectedNameSet.has(weapon.name)">已选</span>
+                <span class="badge muted" v-if="isExcluded(weapon.name)">排除</span>
               </div>
               <div class="scheme-weapon-attrs">
                 <span class="attr-value attr-type">{{ weapon.type }}</span>
@@ -207,6 +269,24 @@
                 >
                   {{ weapon.s3 }}
                 </span>
+              </div>
+              <div class="weapon-exclude-row" @click.stop>
+                <button
+                  class="exclude-toggle small"
+                  :class="{ active: isExcluded(weapon.name) }"
+                  @click.stop="toggleExclude(weapon)"
+                >
+                  {{ isExcluded(weapon.name) ? "取消排除" : "标记排除" }}
+                </button>
+                <input
+                  class="exclude-note-input"
+                  :class="{ 'is-excluded': isExcluded(weapon.name) }"
+                  type="text"
+                  maxlength="30"
+                  placeholder="备注（可选）"
+                  :value="getWeaponNote(weapon.name)"
+                  @input="updateWeaponNote(weapon, $event.target.value)"
+                />
               </div>
             </div>
           </div>
@@ -294,6 +374,13 @@
                     <span class="attr-value" :class="{ conflict: fallbackPlan.s3Conflict }">
                       技能属性：{{ weapon.s3 }}
                     </span>
+                  </div>
+                  <div
+                    v-if="getWeaponNote(weapon.name)"
+                    class="exclude-note-text"
+                    :class="{ 'is-excluded': isExcluded(weapon.name) }"
+                  >
+                    备注：{{ getWeaponNote(weapon.name) }}
                   </div>
                 </div>
               </div>
@@ -389,7 +476,8 @@
                   :class="{
                     'is-selected': weapon.isSelected,
                     'base-selectable': card.baseOverflow,
-                    'is-dim': weapon.baseDim,
+                    'is-dim': weapon.baseDim || weapon.isExcluded,
+                    'is-excluded': weapon.isExcluded,
                   }"
                   :title="card.baseOverflow ? '点击选择基础属性' : ''"
                   @click="toggleSchemeBasePick(card, weapon)"
@@ -404,6 +492,7 @@
                       {{ weapon.rarity }}★
                     </span>
                     <span v-if="weapon.isSelected" class="badge">已选</span>
+                    <span v-if="weapon.isExcluded" class="badge muted">排除</span>
                   </div>
                   <div class="scheme-weapon-attrs">
                     <span class="attr-value attr-type">类型：{{ weapon.type }}</span>
@@ -419,6 +508,9 @@
                     <span class="attr-value" :class="{ locked: card.lockType === 's3' }">
                       技能属性：{{ weapon.s3 }}
                     </span>
+                  </div>
+                  <div v-if="weapon.note" class="exclude-note-text" :class="{ 'is-excluded': weapon.isExcluded }">
+                    备注：{{ weapon.note }}
                   </div>
                 </div>
               </div>
@@ -442,8 +534,18 @@
               <li v-for="item in announcement.items" :key="item">{{ item }}</li>
             </ul>
             <div class="notice-qq" v-if="announcement.qqGroup">
-              QQ 群：{{ announcement.qqGroup }}
-              <span v-if="announcement.qqNote">（{{ announcement.qqNote }}）</span>
+              <a
+                class="ghost-button notice-join"
+                href="https://qm.qq.com/q/FBNLBtEPy8"
+                target="_blank"
+                rel="noopener"
+              >
+                加入 QQ 群
+              </a>
+              <div class="notice-qq-info">
+                QQ 群：{{ announcement.qqGroup }}
+                <span v-if="announcement.qqNote">（{{ announcement.qqNote }}）</span>
+              </div>
             </div>
             <label class="notice-skip">
               <input type="checkbox" v-model="skipNotice" />
@@ -477,6 +579,25 @@
                 <span>{{ link.text }}</span>
                 <span class="repo-arrow">↗</span>
               </a>
+            </div>
+            <div class="about-thanks" v-if="aboutContent.thanks && aboutContent.thanks.length">
+              <h4>感谢</h4>
+              <ul class="about-thanks-list">
+                <li
+                  v-for="(entry, index) in aboutContent.thanks"
+                  :key="entry.name || `about-thanks-${index}`"
+                  class="about-thanks-item"
+                >
+                  <div class="about-thanks-name">
+                    <a v-if="entry.href" :href="entry.href" target="_blank" rel="noreferrer">
+                      {{ entry.name }}
+                      <span class="about-thanks-arrow">↗</span>
+                    </a>
+                    <span v-else>{{ entry.name }}</span>
+                  </div>
+                  <div v-if="entry.note" class="about-thanks-note">{{ entry.note }}</div>
+                </li>
+              </ul>
             </div>
             <div class="about-actions">
               <button class="ghost-button" @click="showAbout = false">关闭</button>

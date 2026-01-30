@@ -51,8 +51,19 @@
               const searchQuery = ref("");
               const selectedNames = ref([]);
               const schemeBaseSelections = ref({});
+              const weaponMarks = ref({});
               const showAbout = ref(false);
+              const showSecondaryMenu = ref(false);
+              const marksStorageKey = "weapon-marks:v1";
+              const legacyExcludedKey = "excluded-notes:v1";
+              const uiStateStorageKey = "planner-ui-state:v1";
+              const noticeSkipKey = "announcement:skip";
+              const legacyNoticePrefix = "announcement:skip:";
+              const perfModeStorageKey = "planner-perf-mode:v1";
               const content = window.CONTENT || {};
+              const lowGpuEnabled = ref(false);
+              const perfPreference = ref("auto");
+              const showPerfNotice = ref(false);
               const defaultAnnouncement = {
                 version: "",
                 title: "公告",
@@ -70,6 +81,7 @@
                 paragraphs: [],
                 author: "",
                 links: [],
+                thanks: [],
               };
               const aboutContent = {
                 ...defaultAbout,
@@ -85,6 +97,153 @@
               const filterS1 = ref([]);
               const filterS2 = ref([]);
               const filterS3 = ref([]);
+
+              const sanitizeArray = (value) => (Array.isArray(value) ? value : []);
+              const weaponNameSet = new Set(weapons.map((weapon) => weapon.name));
+              const s1Set = new Set(weapons.map((weapon) => weapon.s1).filter(Boolean));
+              const s2Set = new Set(weapons.map((weapon) => weapon.s2).filter(Boolean));
+              const s3Set = new Set(weapons.map((weapon) => weapon.s3).filter(Boolean));
+              const mobilePanels = new Set(["weapons", "plans"]);
+
+              const sanitizeState = (raw) => {
+                if (!raw || typeof raw !== "object") return null;
+                const next = {};
+                if (typeof raw.searchQuery === "string") {
+                  next.searchQuery = raw.searchQuery;
+                }
+                if (Array.isArray(raw.selectedNames)) {
+                  const unique = Array.from(new Set(raw.selectedNames));
+                  next.selectedNames = unique.filter((name) => weaponNameSet.has(name));
+                }
+                if (raw.schemeBaseSelections && typeof raw.schemeBaseSelections === "object") {
+                  const cleaned = {};
+                  Object.keys(raw.schemeBaseSelections).forEach((key) => {
+                    const values = sanitizeArray(raw.schemeBaseSelections[key]).filter((value) =>
+                      s1Set.has(value)
+                    );
+                    if (values.length) {
+                      cleaned[key] = Array.from(new Set(values));
+                    }
+                  });
+                  next.schemeBaseSelections = cleaned;
+                }
+                if (typeof raw.showWeaponAttrs === "boolean") {
+                  next.showWeaponAttrs = raw.showWeaponAttrs;
+                }
+                if (typeof raw.showFilterPanel === "boolean") {
+                  next.showFilterPanel = raw.showFilterPanel;
+                }
+                if (typeof raw.showAllSchemes === "boolean") {
+                  next.showAllSchemes = raw.showAllSchemes;
+                }
+                if (mobilePanels.has(raw.mobilePanel)) {
+                  next.mobilePanel = raw.mobilePanel;
+                }
+                const s1Filter = Array.from(
+                  new Set(sanitizeArray(raw.filterS1).filter((value) => s1Set.has(value)))
+                );
+                const s2Filter = Array.from(
+                  new Set(sanitizeArray(raw.filterS2).filter((value) => s2Set.has(value)))
+                );
+                const s3Filter = Array.from(
+                  new Set(sanitizeArray(raw.filterS3).filter((value) => s3Set.has(value)))
+                );
+                if (s1Filter.length) next.filterS1 = s1Filter;
+                if (s2Filter.length) next.filterS2 = s2Filter;
+                if (s3Filter.length) next.filterS3 = s3Filter;
+                return next;
+              };
+
+              try {
+                const storedState = localStorage.getItem(uiStateStorageKey);
+                if (storedState) {
+                  const parsed = JSON.parse(storedState);
+                  const restored = sanitizeState(parsed);
+                  if (restored) {
+                    if (typeof restored.searchQuery === "string") {
+                      searchQuery.value = restored.searchQuery;
+                    }
+                    if (restored.selectedNames) {
+                      selectedNames.value = restored.selectedNames;
+                    }
+                    if (restored.schemeBaseSelections) {
+                      schemeBaseSelections.value = restored.schemeBaseSelections;
+                    }
+                    if (typeof restored.showWeaponAttrs === "boolean") {
+                      showWeaponAttrs.value = restored.showWeaponAttrs;
+                    }
+                    if (typeof restored.showFilterPanel === "boolean") {
+                      showFilterPanel.value = restored.showFilterPanel;
+                    }
+                    if (typeof restored.showAllSchemes === "boolean") {
+                      showAllSchemes.value = restored.showAllSchemes;
+                    }
+                    if (restored.mobilePanel) {
+                      mobilePanel.value = restored.mobilePanel;
+                    }
+                    if (restored.filterS1) filterS1.value = restored.filterS1;
+                    if (restored.filterS2) filterS2.value = restored.filterS2;
+                    if (restored.filterS3) filterS3.value = restored.filterS3;
+                  }
+                }
+              } catch (error) {
+                // ignore storage errors
+              }
+
+              const sanitizeMarks = (raw) => {
+                if (!raw || typeof raw !== "object") return {};
+                const normalized = {};
+                Object.keys(raw).forEach((name) => {
+                  const mark = raw[name];
+                  if (!name) return;
+                  if (mark && typeof mark === "object") {
+                    const excluded = Boolean(mark.excluded);
+                    const note = typeof mark.note === "string" ? mark.note : "";
+                    if (excluded || note) {
+                      normalized[name] = { excluded, note };
+                    }
+                  } else if (typeof mark === "string") {
+                    if (mark) {
+                      normalized[name] = { excluded: false, note: mark };
+                    }
+                  }
+                });
+                return normalized;
+              };
+
+              try {
+                const stored = localStorage.getItem(marksStorageKey);
+                if (stored) {
+                  const parsed = JSON.parse(stored);
+                  weaponMarks.value = sanitizeMarks(parsed);
+                }
+              } catch (error) {
+                // ignore storage errors
+              }
+
+              if (!Object.keys(weaponMarks.value).length) {
+                try {
+                  const legacy = localStorage.getItem(legacyExcludedKey);
+                  if (legacy) {
+                    const parsed = JSON.parse(legacy);
+                    if (parsed && typeof parsed === "object") {
+                      const migrated = {};
+                      Object.keys(parsed).forEach((name) => {
+                        const note = typeof parsed[name] === "string" ? parsed[name] : "";
+                        migrated[name] = { excluded: true, note };
+                      });
+                      weaponMarks.value = sanitizeMarks(migrated);
+                      localStorage.removeItem(legacyExcludedKey);
+                      localStorage.setItem(
+                        marksStorageKey,
+                        JSON.stringify(weaponMarks.value)
+                      );
+                    }
+                  }
+                } catch (error) {
+                  // ignore storage errors
+                }
+              }
             const currentHost = ref(window.location.hostname);
             const allowedHosts = new Set(["end.canmoe.com", "127.0.0.1", "localhost"]);
             const embedAllowedHosts = new Set(
@@ -158,41 +317,260 @@
               startWarningCountdown();
             }
 
-            onMounted(() => {
-              appReady.value = true;
+            const readNoticeSkipVersion = () => {
               try {
-                const skipKey = `announcement:skip:${announcement.version}`;
-                const skipped = localStorage.getItem(skipKey) === "1";
-                if (!skipped) {
-                  skipNotice.value = false;
-                  showNotice.value = true;
+                return localStorage.getItem(noticeSkipKey) || "";
+              } catch (error) {
+                return "";
+              }
+            };
+
+            const writeNoticeSkipVersion = (version) => {
+              try {
+                if (version) {
+                  localStorage.setItem(noticeSkipKey, version);
+                } else {
+                  localStorage.removeItem(noticeSkipKey);
                 }
               } catch (error) {
+                // ignore storage errors
+              }
+            };
+
+            const cleanupLegacyNoticeKeys = () => {
+              try {
+                const keys = [];
+                for (let i = 0; i < localStorage.length; i += 1) {
+                  const key = localStorage.key(i);
+                  if (key && key.startsWith(legacyNoticePrefix)) {
+                    keys.push(key);
+                  }
+                }
+                keys.forEach((key) => localStorage.removeItem(key));
+              } catch (error) {
+                // ignore storage errors
+              }
+            };
+
+            const applyLowGpuMode = (enabled) => {
+              lowGpuEnabled.value = enabled;
+              document.documentElement.classList.toggle("low-gpu", enabled);
+            };
+
+            const readPerfMode = () => {
+              try {
+                const value = localStorage.getItem(perfModeStorageKey) || "";
+                return value === "off" ? "standard" : value;
+              } catch (error) {
+                return "";
+              }
+            };
+
+            const writePerfMode = (value) => {
+              try {
+                if (value) {
+                  localStorage.setItem(perfModeStorageKey, value);
+                } else {
+                  localStorage.removeItem(perfModeStorageKey);
+                }
+              } catch (error) {
+                // ignore storage errors
+              }
+            };
+
+            let perfProbeRunning = false;
+            let perfLagTimer = null;
+            let perfLagTimeout = null;
+            let longTaskObserver = null;
+
+            const autoSwitchToLowGpu = () => {
+              if (perfPreference.value !== "auto" || lowGpuEnabled.value) return;
+              applyLowGpuMode(true);
+              showPerfNotice.value = true;
+            };
+
+            const stopAutoMonitors = () => {
+              if (perfLagTimer) {
+                clearInterval(perfLagTimer);
+                perfLagTimer = null;
+              }
+              if (perfLagTimeout) {
+                clearTimeout(perfLagTimeout);
+                perfLagTimeout = null;
+              }
+              if (longTaskObserver) {
+                longTaskObserver.disconnect();
+                longTaskObserver = null;
+              }
+            };
+
+            const startPerfProbe = (durationMs = 1200) => {
+              if (perfProbeRunning || perfPreference.value !== "auto") return;
+              perfProbeRunning = true;
+              let frames = 0;
+              let total = 0;
+              let last = performance.now();
+              const start = last;
+              const step = (now) => {
+                total += now - last;
+                frames += 1;
+                last = now;
+                if (now - start < durationMs) {
+                  requestAnimationFrame(step);
+                  return;
+                }
+                perfProbeRunning = false;
+                const avg = total / Math.max(frames, 1);
+                if (avg > 40 && perfPreference.value === "auto") {
+                  autoSwitchToLowGpu();
+                }
+              };
+              requestAnimationFrame(step);
+            };
+
+            const startLagMonitor = (durationMs = 8000, intervalMs = 200) => {
+              if (perfPreference.value !== "auto" || perfLagTimer) return;
+              let last = performance.now();
+              perfLagTimer = setInterval(() => {
+                const now = performance.now();
+                const lag = Math.max(0, now - last - intervalMs);
+                last = now;
+                if (lag > 120) {
+                  autoSwitchToLowGpu();
+                }
+              }, intervalMs);
+              perfLagTimeout = setTimeout(() => {
+                if (perfLagTimer) {
+                  clearInterval(perfLagTimer);
+                  perfLagTimer = null;
+                }
+                perfLagTimeout = null;
+              }, durationMs);
+            };
+
+            const startLongTaskObserver = () => {
+              if (perfPreference.value !== "auto" || longTaskObserver) return;
+              if (typeof PerformanceObserver === "undefined") return;
+              try {
+                longTaskObserver = new PerformanceObserver((list) => {
+                  const entries = list.getEntries();
+                  if (entries.some((entry) => entry.duration >= 200)) {
+                    autoSwitchToLowGpu();
+                    stopAutoMonitors();
+                  }
+                });
+                longTaskObserver.observe({ entryTypes: ["longtask"] });
+              } catch (error) {
+                longTaskObserver = null;
+              }
+            };
+
+            const startAutoMonitors = () => {
+              if (perfPreference.value !== "auto") return;
+              startPerfProbe();
+              startLagMonitor();
+              startLongTaskObserver();
+            };
+
+            const initPerfMode = () => {
+              const pref = readPerfMode();
+              if (pref === "low") {
+                perfPreference.value = "low";
+                applyLowGpuMode(true);
+                return;
+              }
+              if (pref === "standard") {
+                perfPreference.value = "standard";
+                applyLowGpuMode(false);
+                return;
+              }
+              perfPreference.value = "auto";
+              startAutoMonitors();
+              const onUserActivity = (event) => {
+                if (readPerfMode()) {
+                  window.removeEventListener("scroll", onUserActivity);
+                  window.removeEventListener("wheel", onUserActivity);
+                  window.removeEventListener("pointerdown", onUserActivity);
+                  window.removeEventListener("keydown", onUserActivity);
+                  window.removeEventListener("touchstart", onUserActivity);
+                  return;
+                }
+                if (event && typeof event.timeStamp === "number") {
+                  const delay = performance.now() - event.timeStamp;
+                  if (delay > 150 && delay < 60000) {
+                    autoSwitchToLowGpu();
+                  }
+                }
+                startAutoMonitors();
+              };
+              window.addEventListener("scroll", onUserActivity, { passive: true });
+              window.addEventListener("wheel", onUserActivity, { passive: true });
+              window.addEventListener("pointerdown", onUserActivity);
+              window.addEventListener("keydown", onUserActivity);
+              window.addEventListener("touchstart", onUserActivity, { passive: true });
+            };
+
+            const setPerfMode = (mode) => {
+              perfPreference.value = mode;
+              showPerfNotice.value = false;
+              if (mode === "low") {
+                applyLowGpuMode(true);
+                writePerfMode("low");
+                stopAutoMonitors();
+                return;
+              }
+              if (mode === "standard") {
+                applyLowGpuMode(false);
+                writePerfMode("standard");
+                stopAutoMonitors();
+                return;
+              }
+              writePerfMode("");
+              applyLowGpuMode(false);
+              stopAutoMonitors();
+              startAutoMonitors();
+            };
+
+            const handleDocClick = (event) => {
+              if (!showSecondaryMenu.value) return;
+              if (!event || !event.target || !event.target.closest) {
+                showSecondaryMenu.value = false;
+                return;
+              }
+              if (!event.target.closest(".secondary-menu")) {
+                showSecondaryMenu.value = false;
+              }
+            };
+
+            onMounted(() => {
+              appReady.value = true;
+              cleanupLegacyNoticeKeys();
+              const skippedVersion = readNoticeSkipVersion();
+              if (skippedVersion !== announcement.version) {
+                skipNotice.value = false;
                 showNotice.value = true;
               }
+              initPerfMode();
+              document.addEventListener("click", handleDocClick);
+            });
+
+            onBeforeUnmount(() => {
+              document.removeEventListener("click", handleDocClick);
             });
 
             const openNotice = () => {
-              try {
-                const skipKey = `announcement:skip:${announcement.version}`;
-                skipNotice.value = localStorage.getItem(skipKey) === "1";
-              } catch (error) {
-                skipNotice.value = false;
-              }
+              skipNotice.value = readNoticeSkipVersion() === announcement.version;
               showNotice.value = true;
             };
 
             const closeNotice = () => {
               showNotice.value = false;
-              try {
-                const skipKey = `announcement:skip:${announcement.version}`;
-                if (skipNotice.value) {
-                  localStorage.setItem(skipKey, "1");
-                } else {
-                  localStorage.removeItem(skipKey);
-                }
-              } catch (error) {
-                // ignore storage errors
+              if (skipNotice.value) {
+                writeNoticeSkipVersion(announcement.version);
+                return;
+              }
+              if (readNoticeSkipVersion() === announcement.version) {
+                writeNoticeSkipVersion("");
               }
             };
 
@@ -221,8 +599,62 @@
                 })
               );
 
+            const excludedNameSet = computed(() => {
+              const names = Object.keys(weaponMarks.value || {});
+              const excluded = names.filter(
+                (name) => weaponMarks.value[name] && weaponMarks.value[name].excluded
+              );
+              return new Set(excluded);
+            });
+
+            const getWeaponMark = (name) =>
+              weaponMarks.value && weaponMarks.value[name]
+                ? weaponMarks.value[name]
+                : { excluded: false, note: "" };
+
+            const isExcluded = (name) => Boolean(getWeaponMark(name).excluded);
+
+            const getWeaponNote = (name) => getWeaponMark(name).note || "";
+
+            const toggleExclude = (weapon) => {
+              if (!weapon || !weapon.name) return;
+              const current = getWeaponMark(weapon.name);
+              const next = { ...current, excluded: !current.excluded };
+              const updated = { ...weaponMarks.value };
+              if (!next.excluded && !next.note) {
+                delete updated[weapon.name];
+              } else {
+                updated[weapon.name] = next;
+              }
+              weaponMarks.value = updated;
+            };
+
+            const updateWeaponNote = (weapon, value) => {
+              if (!weapon || !weapon.name) return;
+              const current = getWeaponMark(weapon.name);
+              const next = { ...current, note: value || "" };
+              const updated = { ...weaponMarks.value };
+              if (!next.excluded && !next.note) {
+                delete updated[weapon.name];
+              } else {
+                updated[weapon.name] = next;
+              }
+              weaponMarks.value = updated;
+            };
+
+            const selectedWeaponRows = computed(() =>
+              selectedNames.value
+                .map((name) => weaponMap.get(name))
+                .filter(Boolean)
+                .map((weapon) => ({
+                  ...weapon,
+                  isExcluded: isExcluded(weapon.name),
+                  note: getWeaponNote(weapon.name),
+                }))
+            );
+
             const selectedWeapons = computed(() =>
-              selectedNames.value.map((name) => weaponMap.get(name)).filter(Boolean)
+              selectedWeaponRows.value.filter((weapon) => !weapon.isExcluded)
             );
 
             const selectedNameSet = computed(() => new Set(selectedNames.value));
@@ -328,6 +760,7 @@
               if (!lockOptions.length) return [];
 
               const selectedSet = new Set(selectedNames.value);
+              const excludedSet = excludedNameSet.value;
               const schemes = [];
 
               dungeons.forEach((dungeon) => {
@@ -350,7 +783,11 @@
                       return a.name.localeCompare(b.name, "zh-Hans-CN");
                     });
 
-                  const baseCounts = countBy(schemeWeapons.map((weapon) => weapon.s1));
+                  const schemeWeaponsActive = schemeWeapons.filter(
+                    (weapon) => !excludedSet.has(weapon.name)
+                  );
+
+                  const baseCounts = countBy(schemeWeaponsActive.map((weapon) => weapon.s1));
                   const baseKeys = Object.keys(baseCounts);
                   const baseSorted = baseKeys.sort((a, b) => {
                     if (baseCounts[b] !== baseCounts[a]) return baseCounts[b] - baseCounts[a];
@@ -428,10 +865,10 @@
                   const missingSelected = targets.filter(
                     (weapon) => !coveredSelectedSet.has(weapon.name)
                   );
-                  const autoWeaponCount = planWeapons.filter((weapon) =>
+                  const autoWeaponCount = schemeWeaponsActive.filter((weapon) =>
                     baseAutoPickSet.has(weapon.s1)
                   ).length;
-                  const displayWeaponCount = planWeapons.filter((weapon) =>
+                  const displayWeaponCount = schemeWeaponsActive.filter((weapon) =>
                     activeBaseSet.has(weapon.s1)
                   ).length;
 
@@ -447,10 +884,14 @@
                   const weaponRows = planWeapons.map((weapon) => ({
                     ...weapon,
                     isSelected: selectedSet.has(weapon.name),
+                    isExcluded: excludedSet.has(weapon.name),
+                    note: getWeaponNote(weapon.name),
                     baseLocked: baseLockedSet.has(weapon.s1),
                     baseConflict:
                       baseOverflow && manualPickReady && !activeBaseSet.has(weapon.s1),
-                    baseDim: baseOverflow && manualPickReady && !activeBaseSet.has(weapon.s1),
+                    baseDim:
+                      (baseOverflow && manualPickReady && !activeBaseSet.has(weapon.s1)) ||
+                      excludedSet.has(weapon.name),
                   }));
 
                   schemes.push({
@@ -461,7 +902,7 @@
                     schemeKey,
                     weaponRows,
                     weaponCount: autoWeaponCount,
-                    maxWeaponCount: planWeapons.length,
+                    maxWeaponCount: schemeWeaponsActive.length,
                     selectedMatchCount: autoCoveredSelected.length,
                     selectedMissingCount: autoMissingSelected.length,
                     selectedMatchNames: autoCoveredSelected.map((weapon) => weapon.name),
@@ -488,6 +929,9 @@
                   return b.selectedMatchCount - a.selectedMatchCount;
                 }
                 if (b.weaponCount !== a.weaponCount) return b.weaponCount - a.weaponCount;
+                if (b.maxWeaponCount !== a.maxWeaponCount) {
+                  return b.maxWeaponCount - a.maxWeaponCount;
+                }
                 if (a.dungeon.name !== b.dungeon.name) {
                   return a.dungeon.name.localeCompare(b.dungeon.name, "zh-Hans-CN");
                 }
@@ -671,11 +1115,53 @@
               window.removeEventListener("resize", scheduleAttrWrap);
             });
 
+            watch(
+              weaponMarks,
+              (value) => {
+                try {
+                  const keys = Object.keys(value || {});
+                  if (!keys.length) {
+                    localStorage.removeItem(marksStorageKey);
+                    return;
+                  }
+                  localStorage.setItem(marksStorageKey, JSON.stringify(value));
+                } catch (error) {
+                  // ignore storage errors
+                }
+              },
+              { deep: true }
+            );
+
+            const uiState = computed(() => ({
+              searchQuery: searchQuery.value,
+              selectedNames: selectedNames.value,
+              schemeBaseSelections: schemeBaseSelections.value,
+              showWeaponAttrs: showWeaponAttrs.value,
+              showFilterPanel: showFilterPanel.value,
+              showAllSchemes: showAllSchemes.value,
+              filterS1: filterS1.value,
+              filterS2: filterS2.value,
+              filterS3: filterS3.value,
+              mobilePanel: mobilePanel.value,
+            }));
+
+            watch(
+              uiState,
+              (value) => {
+                try {
+                  localStorage.setItem(uiStateStorageKey, JSON.stringify(value));
+                } catch (error) {
+                  // ignore storage errors
+                }
+              },
+              { deep: true }
+            );
+
             watch([showWeaponAttrs, showAllSchemes, mobilePanel], scheduleAttrWrap);
             watch(filteredWeapons, scheduleAttrWrap);
             watch(visibleRecommendations, scheduleAttrWrap);
             watch(
-              () => selectedNames.value.length,
+              () => selectedWeapons.value.length,
               (count) => {
                 if (count === 1) {
                   showAllSchemes.value = true;
@@ -708,8 +1194,13 @@
               return {
                 searchQuery,
                 selectedNames,
+                selectedWeaponRows,
                 selectedWeapons,
                 selectedNameSet,
+                isExcluded,
+                toggleExclude,
+                getWeaponNote,
+                updateWeaponNote,
                 showWeaponAttrs,
                 showFilterPanel,
                 showAllSchemes,
@@ -753,6 +1244,11 @@
               isEmbedded,
               warningCountdown,
               dismissDomainWarning,
+              lowGpuEnabled,
+              perfPreference,
+              showSecondaryMenu,
+              showPerfNotice,
+              setPerfMode,
             };
           },
         }).mount("#app");
