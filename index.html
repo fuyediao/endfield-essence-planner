@@ -46,6 +46,7 @@
         </div>
         <div class="hero-actions">
           <button class="about-button notice-button" @click="openNotice">公告</button>
+          <button class="about-button" @click="showChangelog = true">更新日志</button>
           <button class="about-button" @click="showAbout = true">关于</button>
           <div class="secondary-menu">
             <button class="ghost-button menu-toggle" @click="showSecondaryMenu = !showSecondaryMenu">
@@ -534,9 +535,6 @@
               <ul class="notice-list">
                 <li v-for="item in announcement.items" :key="item">{{ item }}</li>
               </ul>
-              <div v-if="announcement.items && announcement.items.length > 6" class="notice-scroll-hint">
-                内容较长，可上下滚动查看更多
-              </div>
             </div>
             <div class="notice-footer">
               <div class="notice-qq" v-if="announcement.qqGroup">
@@ -560,6 +558,33 @@
               <div class="about-actions">
                 <button class="ghost-button" @click="closeNotice">关闭</button>
               </div>
+            </div>
+          </div>
+        </div>
+      </transition>
+
+      <transition name="fade-scale">
+        <div v-if="showChangelog" class="about-overlay" @click.self="showChangelog = false">
+          <div class="about-card changelog-card">
+            <h3>{{ changelog.title }}</h3>
+            <div class="changelog-body">
+              <div v-if="!changelog.entries || !changelog.entries.length" class="empty">
+                暂无更新日志。
+              </div>
+              <div
+                v-else
+                v-for="(entry, index) in changelog.entries"
+                :key="entry.date || `changelog-${index}`"
+                class="changelog-section"
+              >
+                <div class="changelog-date">{{ entry.date }}</div>
+                <ul class="changelog-list">
+                  <li v-for="item in entry.items" :key="item">{{ item }}</li>
+                </ul>
+              </div>
+            </div>
+            <div class="about-actions">
+              <button class="ghost-button" @click="showChangelog = false">关闭</button>
             </div>
           </div>
         </div>

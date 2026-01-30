@@ -76,6 +76,14 @@
                 ...defaultAnnouncement,
                 ...(content.announcement || {}),
               };
+              const defaultChangelog = {
+                title: "更新日志",
+                entries: [],
+              };
+              const changelog = {
+                ...defaultChangelog,
+                ...(content.changelog || {}),
+              };
               const defaultAbout = {
                 title: "关于本工具",
                 paragraphs: [],
@@ -88,6 +96,7 @@
                 ...(content.about || {}),
               };
               const showNotice = ref(false);
+              const showChangelog = ref(false);
               const skipNotice = ref(false);
               const appReady = ref(false);
               const mobilePanel = ref("weapons");
@@ -1157,6 +1166,19 @@
               { deep: true }
             );
 
+            const setModalScrollLock = (locked) => {
+              document.documentElement.classList.toggle("modal-open", locked);
+              document.body.classList.toggle("modal-open", locked);
+            };
+
+            watch(
+              [showNotice, showChangelog],
+              ([noticeOpen, changelogOpen]) => {
+                setModalScrollLock(Boolean(noticeOpen || changelogOpen));
+              },
+              { immediate: true }
+            );
+
             watch([showWeaponAttrs, showAllSchemes, mobilePanel], scheduleAttrWrap);
             watch(filteredWeapons, scheduleAttrWrap);
             watch(visibleRecommendations, scheduleAttrWrap);
@@ -1229,9 +1251,11 @@
               hasImage,
               weaponImageSrc,
               announcement,
+              changelog,
               aboutContent,
               showAbout,
               showNotice,
+              showChangelog,
               skipNotice,
               openNotice,
               closeNotice,
