@@ -52,6 +52,11 @@ window.CONTENT = {
         text: "介绍视频",
         href: "https://www.bilibili.com/video/BV1r26cB3EYL/",
       },
+      {
+        chip: "BILIBILI",
+        text: "部分更新内容介绍",
+        href: "https://www.bilibili.com/video/BV12o61BGEay/",
+      },
     ],
     thanks: [
       { name: "端木芒 (终末地基质图的原作者)", href: "https://space.bilibili.com/17955975", note: "提供方案排序与效率优化建议" },
