@@ -1375,6 +1375,11 @@
 
             const toggleTutorialExclude = () => {
               tutorialExcluded.value = !tutorialExcluded.value;
+              if (tutorialExcluded.value) {
+                trackEvent("weapon_exclude", { weapon: tutorialWeapon.name, tutorial: true });
+              } else {
+                trackEvent("weapon_unexclude", { weapon: tutorialWeapon.name, tutorial: true });
+              }
             };
 
             const markTutorialNoteTouched = () => {
