@@ -1,6 +1,16 @@
       const dungeons = Array.isArray(window.DUNGEONS) ? window.DUNGEONS : [];
       const weapons = Array.isArray(window.WEAPONS) ? window.WEAPONS : [];
       const weaponImages = new Set(Array.isArray(window.WEAPON_IMAGES) ? window.WEAPON_IMAGES : []);
+      const i18nState = {
+        locale: "zh-CN",
+        t: (key, params) => {
+          if (!params) return key;
+          return String(key || "").replace(/\{(\w+)\}/g, (match, name) =>
+            Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match
+          );
+        },
+        tTerm: (category, value) => value,
+      };
       const finishPreload = () => {
         try {
           if (typeof window !== "undefined" && typeof window.__finishPreload === "function") {
@@ -24,7 +34,10 @@
           return acc;
         }, {});
 
-      const formatS1 = (value) => value || "任意";
+      const formatS1 = (value) => {
+        if (!value || value === "任意") return i18nState.t("任意");
+        return i18nState.tTerm("s1", value);
+      };
 
       const getS1OrderIndex = (value) => {
         const index = S1_ORDER.indexOf(value);
@@ -64,27 +77,45 @@
         if (lockOption.type === "s2") {
           if (weapon.s2 !== lockOption.value) {
             conflictS2 = true;
-            reasons.push(`附加属性需为 ${lockOption.value}`);
+            reasons.push(
+              i18nState.t("附加属性需为 {value}", {
+                value: i18nState.tTerm("s2", lockOption.value),
+              })
+            );
           }
           if (!dungeon.s3_pool.includes(weapon.s3)) {
             conflictS3 = true;
-            reasons.push(`方案地区（${dungeon.name}）不产出该技能属性`);
+            reasons.push(
+              i18nState.t("方案地区（{name}）不产出该技能属性", {
+                name: i18nState.tTerm("dungeon", dungeon.name),
+              })
+            );
           }
         } else {
           if (weapon.s3 !== lockOption.value) {
             conflictS3 = true;
-            reasons.push(`技能属性需为 ${lockOption.value}`);
+            reasons.push(
+              i18nState.t("技能属性需为 {value}", {
+                value: i18nState.tTerm("s3", lockOption.value),
+              })
+            );
           }
           if (!dungeon.s2_pool.includes(weapon.s2)) {
             conflictS2 = true;
-            reasons.push(`方案地区（${dungeon.name}）不产出该附加属性`);
+            reasons.push(
+              i18nState.t("方案地区（{name}）不产出该附加属性", {
+                name: i18nState.tTerm("dungeon", dungeon.name),
+              })
+            );
           }
         }
 
         return {
           conflictS2,
           conflictS3,
-          conflictReason: reasons.length ? reasons.join("；") : "与当前方案属性不兼容",
+          conflictReason: reasons.length
+            ? reasons.join("；")
+            : i18nState.t("与当前方案属性不兼容"),
         };
       };
 
@@ -129,43 +160,228 @@
               const noticeSkipKey = "announcement:skip";
               const legacyNoticePrefix = "announcement:skip:";
               const perfModeStorageKey = "planner-perf-mode:v1";
+              const langStorageKey = "planner-lang";
+              const i18n = window.I18N || {};
+              const fallbackLocale = "zh-CN";
+              const supportedLocales = ["zh-CN", "zh-TW", "en", "ja"].filter(
+                (locale) => i18n && i18n[locale]
+              );
+              if (!supportedLocales.length) supportedLocales.push(fallbackLocale);
+              const normalizeLocale = (value) =>
+                supportedLocales.includes(value) ? value : fallbackLocale;
+              const detectLocale = () => {
+                if (typeof window === "undefined") return fallbackLocale;
+                const stored = localStorage.getItem(langStorageKey);
+                if (stored && supportedLocales.includes(stored)) return stored;
+                const raw = (navigator.language || "").toLowerCase();
+                if (raw.startsWith("zh")) {
+                  if (raw.includes("tw") || raw.includes("hk") || raw.includes("mo") || raw.includes("hant")) {
+                    return normalizeLocale("zh-TW");
+                  }
+                  return normalizeLocale("zh-CN");
+                }
+                if (raw.startsWith("ja")) return normalizeLocale("ja");
+                return normalizeLocale("en");
+              };
+              const locale = ref(detectLocale());
+              const localeLabels = {
+                "zh-CN": "简体中文",
+                "zh-TW": "繁體中文",
+                en: "English",
+                ja: "日本語",
+              };
+              const languageOptions = supportedLocales.map((value) => ({
+                value,
+                label: localeLabels[value] || value,
+              }));
+              const langSwitchRef = ref(null);
+              const showLangMenu = ref(false);
+              const langMenuPlacement = ref("right");
+              const updateLangMenuPlacement = () => {
+                if (typeof window === "undefined") return;
+                const container = langSwitchRef.value;
+                if (!container) return;
+                const menu = container.querySelector(".lang-menu");
+                const button = container.querySelector(".lang-button");
+                if (!menu || !button) return;
+                const menuWidth = menu.offsetWidth || 0;
+                const viewportWidth =
+                  window.innerWidth ||
+                  (document.documentElement && document.documentElement.clientWidth) ||
+                  0;
+                if (!viewportWidth || !menuWidth) return;
+                const margin = 8;
+                const buttonRect = button.getBoundingClientRect();
+                const rightAlignLeft = buttonRect.right - menuWidth;
+                const rightAlignRight = buttonRect.right;
+                const leftAlignLeft = buttonRect.left;
+                const leftAlignRight = buttonRect.left + menuWidth;
+                const fitsRight =
+                  rightAlignLeft >= margin && rightAlignRight <= viewportWidth - margin;
+                const fitsLeft =
+                  leftAlignLeft >= margin && leftAlignRight <= viewportWidth - margin;
+                if (!fitsRight && fitsLeft) {
+                  langMenuPlacement.value = "left";
+                  return;
+                }
+                if (!fitsLeft && fitsRight) {
+                  langMenuPlacement.value = "right";
+                  return;
+                }
+                if (!fitsLeft && !fitsRight) {
+                  const spaceRight = viewportWidth - buttonRect.left;
+                  const spaceLeft = buttonRect.right;
+                  langMenuPlacement.value = spaceRight >= spaceLeft ? "left" : "right";
+                  return;
+                }
+                langMenuPlacement.value = "right";
+              };
+              const toggleLangMenu = () => {
+                showSecondaryMenu.value = false;
+                showLangMenu.value = !showLangMenu.value;
+                if (showLangMenu.value) {
+                  if (typeof nextTick === "function") {
+                    nextTick(updateLangMenuPlacement);
+                  } else {
+                    updateLangMenuPlacement();
+                  }
+                }
+              };
+              const setLocale = (value) => {
+                locale.value = value;
+                showLangMenu.value = false;
+              };
+              const closeLangMenu = () => {
+                showLangMenu.value = false;
+              };
+              const getStrings = (targetLocale) =>
+                (i18n[targetLocale] && i18n[targetLocale].strings) || {};
+              const getTerms = (targetLocale) =>
+                (i18n[targetLocale] && i18n[targetLocale].terms) || {};
+              const interpolate = (text, params) => {
+                if (!params) return text;
+                return String(text).replace(/\{(\w+)\}/g, (match, name) =>
+                  Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match
+                );
+              };
+              const t = (key, params) => {
+                const strings = getStrings(locale.value);
+                const fallbackStrings = getStrings(fallbackLocale);
+                const raw =
+                  Object.prototype.hasOwnProperty.call(strings, key)
+                    ? strings[key]
+                    : Object.prototype.hasOwnProperty.call(fallbackStrings, key)
+                    ? fallbackStrings[key]
+                    : key;
+                return interpolate(raw, params);
+              };
+              const tTerm = (category, value) => {
+                if (!value) return value;
+                const terms = getTerms(locale.value);
+                const fallbackTerms = getTerms(fallbackLocale);
+                const table = terms && terms[category] ? terms[category] : {};
+                const fallbackTable =
+                  fallbackTerms && fallbackTerms[category] ? fallbackTerms[category] : {};
+                return table[value] || fallbackTable[value] || value;
+              };
+              i18nState.t = t;
+              i18nState.tTerm = tTerm;
+              i18nState.locale = locale.value;
               const content = window.CONTENT || {};
               const lowGpuEnabled = ref(false);
               const perfPreference = ref("auto");
               const showPerfNotice = ref(false);
               const perfAutoCooldownMs = 2500;
               let perfAutoBlockedUntil = 0;
-              const defaultAnnouncement = {
+              const showAiNotice = computed(() => locale.value !== "zh-CN");
+              const updateMeta = () => {
+                if (typeof document === "undefined") return;
+                const title = t("终末地基质规划器 (Endfield Essence Planner)");
+                const description = t(
+                  "终末地基质规划器：根据附加/技能属性池与锁定规则，自动计算多武器共刷方案，提供基础属性冲突提示与可刷数量参考，适配移动端。"
+                );
+                document.title = title;
+                const metaDesc = document.querySelector('meta[name="description"]');
+                if (metaDesc) metaDesc.setAttribute("content", description);
+                const ogTitle = document.querySelector('meta[property="og:title"]');
+                if (ogTitle) ogTitle.setAttribute("content", title);
+                const ogDesc = document.querySelector('meta[property="og:description"]');
+                if (ogDesc) ogDesc.setAttribute("content", description);
+                const ogSiteName = document.querySelector('meta[property="og:site_name"]');
+                if (ogSiteName) ogSiteName.setAttribute("content", t("终末地基质规划器"));
+              };
+              const updatePreloadText = () => {
+                if (typeof document === "undefined") return;
+                const overlay = document.getElementById("app-preload");
+                if (!overlay) return;
+                const title = overlay.querySelector(".preload-title");
+                const sub = overlay.querySelector(".preload-sub");
+                if (title) title.textContent = t("少女祈祷中");
+                if (sub) sub.textContent = t("首次打开或强制刷新可能稍慢");
+              };
+              watch(
+                locale,
+                (value) => {
+                  i18nState.locale = value;
+                  if (typeof document !== "undefined") {
+                    document.documentElement.lang = value;
+                  }
+                  try {
+                    localStorage.setItem(langStorageKey, value);
+                  } catch (error) {
+                    // ignore storage errors
+                  }
+                  updateMeta();
+                  updatePreloadText();
+                },
+                { immediate: true }
+              );
+              const getContentForLocale = (targetLocale) => {
+                const base = {
+                  announcement: content.announcement || {},
+                  changelog: content.changelog || {},
+                  about: content.about || {},
+                };
+                if (!content.locales || targetLocale === fallbackLocale) return base;
+                const localized = content.locales[targetLocale] || {};
+                return {
+                  announcement: { ...base.announcement, ...(localized.announcement || {}) },
+                  changelog: { ...base.changelog, ...(localized.changelog || {}) },
+                  about: { ...base.about, ...(localized.about || {}) },
+                };
+              };
+              const localizedContent = computed(() => getContentForLocale(locale.value));
+              const defaultAnnouncement = computed(() => ({
                 version: "",
-                title: "公告",
+                title: t("公告"),
                 date: "",
                 qqGroup: "",
                 qqNote: "",
                 items: [],
-              };
-              const announcement = {
-                ...defaultAnnouncement,
-                ...(content.announcement || {}),
-              };
-              const defaultChangelog = {
-                title: "更新日志",
+              }));
+              const announcement = computed(() => ({
+                ...defaultAnnouncement.value,
+                ...(localizedContent.value.announcement || {}),
+              }));
+              const defaultChangelog = computed(() => ({
+                title: t("更新日志"),
                 entries: [],
-              };
-              const changelog = {
-                ...defaultChangelog,
-                ...(content.changelog || {}),
-              };
-              const defaultAbout = {
-                title: "关于本工具",
+              }));
+              const changelog = computed(() => ({
+                ...defaultChangelog.value,
+                ...(localizedContent.value.changelog || {}),
+              }));
+              const defaultAbout = computed(() => ({
+                title: t("关于本工具"),
                 paragraphs: [],
                 author: "",
                 links: [],
                 thanks: [],
-              };
-              const aboutContent = {
-                ...defaultAbout,
-                ...(content.about || {}),
-              };
+              }));
+              const aboutContent = computed(() => ({
+                ...defaultAbout.value,
+                ...(localizedContent.value.about || {}),
+              }));
               const showNotice = ref(false);
               const showChangelog = ref(false);
               const skipNotice = ref(false);
@@ -210,9 +426,16 @@
                 if (typeof window === "undefined") return;
                 if (window.matchMedia) {
                   isPortrait.value = window.matchMedia("(orientation: portrait)").matches;
-                  return;
+                } else {
+                  isPortrait.value = window.innerHeight >= window.innerWidth;
                 }
-                isPortrait.value = window.innerHeight >= window.innerWidth;
+                if (showLangMenu.value) {
+                  if (typeof nextTick === "function") {
+                    nextTick(updateLangMenuPlacement);
+                  } else {
+                    updateLangMenuPlacement();
+                  }
+                }
               };
 
               updateViewportOrientation();
@@ -236,56 +459,98 @@
               const tutorialRequiredBaseKeys = ["主能力提升", "敏捷提升"];
               const tutorialManualBack = ref(false);
               const isTutorialGuideWeapon = (name) => tutorialGuideWeaponNames.has(name);
+              const tutorialTargetDungeon = dungeons.find(
+                (dungeon) => dungeon && dungeon.id === tutorialTargetDungeonId
+              );
+              const tutorialTargetDungeonName = tutorialTargetDungeon
+                ? tutorialTargetDungeon.name
+                : "";
 
-              const tutorialSteps = [
-                {
-                  key: "show-attrs",
-                  title: "查看属性 / 排除 / 备注",
-                  body: [
-                    "点击“显示属性/排除/备注管理”按钮，切换到属性视图。",
-                    "切换后会出现一把教学示例武器，接下来按提示操作即可。",
-                  ],
-                },
-                {
-                  key: "exclude",
-                  title: "排除武器",
-                  body: [
-                    "对教学示例武器点击“标记排除”。",
-                    "被排除的武器不会参与方案计算。",
-                  ],
-                },
-                {
-                  key: "note",
-                  title: "添加备注",
-                  body: [
-                    "可为任意武器添加备注（不强制）",
-                    "例如已毕业。",
-                    "此步不会自动跳转，请手动点击下一步。",
-                  ],
-                },
-                {
-                  key: "base-pick",
-                  title: "基础属性选择",
-                  body: [
-                    "已自动选中“沧溟星梦（智识提升）”，并定位到“四号谷地·供能高地”。",
-                    "部分情况下会出现“最高可刷数量”大于“可同时刷数量”。",
-                    "在该方案中最多可刷 7 把，但最多只能同时刷 6 把。",
-                    "由于基础属性有 4 种，但是只能锁定 3 种。",
-                    "因此需要手动选择两种属性(当前已选中“沧溟星梦（智识提升）”,所以会自动选择一个属性为智识提升且无法取消)。",
-                    "请点击“白夜新星（主能力提升）”与“宏愿（敏捷提升）” 选择两种属性。",
-                  ],
-                },
-              ];
-              const tutorialTotalSteps = tutorialSteps.length;
+              const tutorialSteps = computed(() => {
+                const targetWeapon = tTerm("weapon", tutorialTargetWeaponName);
+                const targetWeaponS1 = tTerm("s1", "智识提升");
+                const targetDungeon = tTerm("dungeon", tutorialTargetDungeonName);
+                const guideWeaponA = tTerm("weapon", "白夜新星");
+                const guideWeaponAS1 = tTerm("s1", "主能力提升");
+                const guideWeaponB = tTerm("weapon", "宏愿");
+                const guideWeaponBS1 = tTerm("s1", "敏捷提升");
+                return [
+                  {
+                    key: "show-attrs",
+                    title: t("查看属性 / 排除 / 备注"),
+                    body: [
+                      t("点击“{label}”按钮，切换到属性视图。", {
+                        label: t("显示属性/排除/备注管理"),
+                      }),
+                      t("切换后会出现一把教学示例武器，接下来按提示操作即可。"),
+                    ],
+                  },
+                  {
+                    key: "exclude",
+                    title: t("排除武器"),
+                    body: [
+                      t("对教学示例武器点击“{label}”。", { label: t("标记排除") }),
+                      t("被排除的武器不会参与方案计算。"),
+                    ],
+                  },
+                  {
+                    key: "note",
+                    title: t("添加备注"),
+                    body: [
+                      t("可为任意武器添加备注（不强制）"),
+                      t("例如已毕业。"),
+                      t("此步不会自动跳转，请手动点击{label}。", { label: t("下一步") }),
+                    ],
+                  },
+                  {
+                    key: "base-pick",
+                    title: t("基础属性选择"),
+                    body: [
+                      t("已自动选中“{weapon}（{s1}）”，并定位到“{dungeon}”。", {
+                        weapon: targetWeapon,
+                        s1: targetWeaponS1,
+                        dungeon: targetDungeon,
+                      }),
+                      t("部分情况下会出现“最高可刷数量”大于“可同时刷数量”。"),
+                      t("在该方案中最多可刷 {max} 把，但最多只能同时刷 {simul} 把。", {
+                        max: 7,
+                        simul: 6,
+                      }),
+                      t("由于基础属性有 {total} 种，但是只能锁定 {lock} 种。", {
+                        total: 4,
+                        lock: 3,
+                      }),
+                      t(
+                        "因此需要手动选择两种属性(当前已选中“{weapon}（{s1}）”,所以会自动选择一个属性为 {s1} 且无法取消)。",
+                        {
+                          weapon: targetWeapon,
+                          s1: targetWeaponS1,
+                        }
+                      ),
+                      t("请点击“{weaponA}（{s1A}）”与“{weaponB}（{s1B}）” 选择两种属性。", {
+                        weaponA: guideWeaponA,
+                        s1A: guideWeaponAS1,
+                        weaponB: guideWeaponB,
+                        s1B: guideWeaponBS1,
+                      }),
+                    ],
+                  },
+                ];
+              });
+              const tutorialTotalSteps = computed(() => tutorialSteps.value.length);
               const tutorialStep = computed(
-                () => tutorialSteps[tutorialStepIndex.value] || tutorialSteps[0]
+                () => tutorialSteps.value[tutorialStepIndex.value] || tutorialSteps.value[0]
               );
               const tutorialStepKey = computed(() => tutorialStep.value.key);
               const tutorialStepLines = computed(() => {
                 const step = tutorialStep.value || {};
                 const lines = Array.isArray(step.body) ? step.body.slice() : [];
                 if (step.key === "base-pick" && isPortrait.value) {
-                  lines.unshift("竖屏时请先点击上方“方案推荐”标签进入方案列表。");
+                  lines.unshift(
+                    t("竖屏时请先点击上方“{label}”标签进入方案列表。", {
+                      label: t("方案推荐"),
+                    })
+                  );
                 }
                 return lines;
               });
@@ -503,7 +768,7 @@
                   embedHost.value = "";
                 }
               }
-              embedHostLabel.value = embedHost.value || "未知来源";
+              embedHostLabel.value = embedHost.value || t("未知来源");
               isEmbedTrusted.value =
                 embedHost.value && embedAllowedHosts.size
                   ? embedAllowedHosts.has(embedHost.value)
@@ -772,13 +1037,24 @@
             };
 
             const handleDocClick = (event) => {
-              if (!showSecondaryMenu.value) return;
               if (!event || !event.target || !event.target.closest) {
                 showSecondaryMenu.value = false;
+                showLangMenu.value = false;
                 return;
               }
-              if (!event.target.closest(".secondary-menu")) {
+              if (showSecondaryMenu.value && !event.target.closest(".secondary-menu")) {
                 showSecondaryMenu.value = false;
+              }
+              if (showLangMenu.value && !event.target.closest(".lang-switch")) {
+                showLangMenu.value = false;
+              }
+            };
+
+            const handleDocKeydown = (event) => {
+              if (!event) return;
+              if (event.key === "Escape") {
+                showSecondaryMenu.value = false;
+                showLangMenu.value = false;
               }
             };
 
@@ -786,7 +1062,7 @@
               appReady.value = true;
               cleanupLegacyNoticeKeys();
               const skippedVersion = readNoticeSkipVersion();
-              if (skippedVersion !== announcement.version) {
+              if (skippedVersion !== announcement.value.version) {
                 skipNotice.value = false;
                 showNotice.value = true;
               }
@@ -794,6 +1070,7 @@
               updateViewportOrientation();
               window.addEventListener("resize", updateViewportOrientation);
               document.addEventListener("click", handleDocClick);
+              document.addEventListener("keydown", handleDocKeydown);
               if (typeof nextTick === "function") {
                 nextTick(() => requestAnimationFrame(() => finishPreload()));
               } else {
@@ -805,20 +1082,21 @@
             onBeforeUnmount(() => {
               window.removeEventListener("resize", updateViewportOrientation);
               document.removeEventListener("click", handleDocClick);
+              document.removeEventListener("keydown", handleDocKeydown);
             });
 
             const openNotice = () => {
-              skipNotice.value = readNoticeSkipVersion() === announcement.version;
+              skipNotice.value = readNoticeSkipVersion() === announcement.value.version;
               showNotice.value = true;
             };
 
             const closeNotice = () => {
               showNotice.value = false;
               if (skipNotice.value) {
-                writeNoticeSkipVersion(announcement.version);
+                writeNoticeSkipVersion(announcement.value.version);
                 return;
               }
-              if (readNoticeSkipVersion() === announcement.version) {
+              if (readNoticeSkipVersion() === announcement.value.version) {
                 writeNoticeSkipVersion("");
               }
             };
@@ -1019,15 +1297,24 @@
 
             const filteredWeapons = computed(() => {
               const query = normalizeText(searchQuery.value);
+              const getSearchText = (weapon) =>
+                normalizeText(
+                  [
+                    weapon.name,
+                    tTerm("weapon", weapon.name),
+                    weapon.type,
+                    tTerm("type", weapon.type),
+                    weapon.s1,
+                    tTerm("s1", weapon.s1),
+                    weapon.s2,
+                    tTerm("s2", weapon.s2),
+                    weapon.s3,
+                    tTerm("s3", weapon.s3),
+                  ].join(" ")
+                );
               return weapons
                 .filter((weapon) => {
-                  const matchQuery =
-                    !query ||
-                    normalizeText(weapon.name).includes(query) ||
-                    normalizeText(weapon.type).includes(query) ||
-                    normalizeText(weapon.s1).includes(query) ||
-                    normalizeText(weapon.s2).includes(query) ||
-                    normalizeText(weapon.s3).includes(query);
+                  const matchQuery = !query || getSearchText(weapon).includes(query);
                   if (!matchQuery) return false;
                   if (filterS1.value.length && !filterS1.value.includes(weapon.s1)) return false;
                   if (filterS2.value.length && !filterS2.value.includes(weapon.s2)) return false;
@@ -1565,7 +1852,7 @@
 
             const advanceTutorialStep = (options = {}) => {
               const { manual = false } = options;
-              if (tutorialStepIndex.value >= tutorialSteps.length - 1) {
+              if (tutorialStepIndex.value >= tutorialTotalSteps.value - 1) {
                 finishTutorial();
                 return;
               }
@@ -1938,6 +2225,16 @@
             });
 
               return {
+                locale,
+                languageOptions,
+                langSwitchRef,
+                showLangMenu,
+                langMenuPlacement,
+                toggleLangMenu,
+                setLocale,
+                t,
+                tTerm,
+                showAiNotice,
                 searchQuery,
                 selectedNames,
                 selectedWeaponRows,

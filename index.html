@@ -110,62 +110,105 @@
     <div id="app" class="app-shell" v-cloak v-show="appReady">
       <header class="hero">
         <div>
-          <h1>终末地基质规划器</h1>
+          <h1>{{ t("终末地基质规划器") }}</h1>
           <p>
-            根据 <span class="accent">附加/技能属性池</span> 与 <span class="accent">锁定规则</span> 自动判定共刷方案。
-            基础属性仅可三选，系统会给出冲突提示与推荐三选。
+            {{ t("根据") }}
+            <span class="accent">{{ t("附加/技能属性池") }}</span>
+            {{ t("与") }}
+            <span class="accent">{{ t("锁定规则") }}</span>
+            {{ t("自动判定共刷方案。") }}
+            {{ t("基础属性仅可三选，系统会给出冲突提示与推荐三选。") }}
           </p>
         </div>
         <div class="hero-actions">
-          <button class="about-button notice-button" @click="openNotice">公告</button>
-          <button class="about-button" @click="showChangelog = true">更新日志</button>
-          <button class="about-button" @click="showAbout = true">关于</button>
+          <div class="lang-switch" ref="langSwitchRef" @click.stop>
+            <button
+              class="lang-button"
+              type="button"
+              aria-label="Language"
+              aria-haspopup="listbox"
+              :aria-expanded="showLangMenu ? 'true' : 'false'"
+              @click="toggleLangMenu"
+            >
+              <span class="lang-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <path d="M3 12h18"></path>
+                  <path d="M12 3a13 13 0 0 1 0 18"></path>
+                  <path d="M12 3a13 13 0 0 0 0 18"></path>
+                </svg>
+              </span>
+              <span class="lang-label">Language</span>
+            </button>
+            <div v-if="showLangMenu" class="lang-menu" :class="'align-' + langMenuPlacement" role="listbox">
+              <button
+                v-for="option in languageOptions"
+                :key="option.value"
+                class="lang-option"
+                :class="{ active: option.value === locale }"
+                role="option"
+                :aria-selected="option.value === locale"
+                @click="setLocale(option.value)"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+          </div>
+          <button class="about-button notice-button" @click="openNotice">{{ t("公告") }}</button>
+          <button class="about-button" @click="showChangelog = true">{{ t("更新日志") }}</button>
+          <button class="about-button" @click="showAbout = true">{{ t("关于") }}</button>
           <div class="secondary-menu">
             <button class="ghost-button menu-toggle" @click="showSecondaryMenu = !showSecondaryMenu">
-              更多设置
+              {{ t("更多设置") }}
             </button>
             <div v-if="showSecondaryMenu" class="secondary-panel">
               <div class="secondary-item">
-                <div class="secondary-label">性能模式</div>
+                <div class="secondary-label">{{ t("性能模式") }}</div>
                 <select class="secondary-select" :value="perfPreference" @change="setPerfMode($event.target.value)">
-                  <option value="auto">自动</option>
-                  <option value="standard">标准</option>
-                  <option value="low">低GPU</option>
+                  <option value="auto">{{ t("自动") }}</option>
+                  <option value="standard">{{ t("标准") }}</option>
+                  <option value="low">{{ t("低GPU") }}</option>
                 </select>
                 <div v-if="perfPreference === 'auto'" class="secondary-hint">
-                  当前自动：{{ lowGpuEnabled ? "低GPU" : "标准" }}
+                  {{ t("当前自动：") }}{{ lowGpuEnabled ? t("低GPU") : t("标准") }}
                 </div>
               </div>
               <div class="secondary-item secondary-desc">
-                自动模式会根据渲染性能临时切换低GPU模式。
+                {{ t("自动模式会根据渲染性能临时切换低GPU模式。") }}
               </div>
               <div class="secondary-item">
-                <div class="secondary-label">新手教程</div>
-                <button class="ghost-button" @click="startTutorial(true)">再次体验</button>
+                <div class="secondary-label">{{ t("新手教程") }}</div>
+                <button class="ghost-button" @click="startTutorial(true)">{{ t("再次体验") }}</button>
               </div>
               <div class="secondary-item secondary-desc">
                 <label class="notice-skip">
                   <input type="checkbox" v-model="tutorialSkipAll" />
-                  不再自动弹出当前版本新手教程
+                  {{ t("不再自动弹出当前版本新手教程") }}
                 </label>
               </div>
             </div>
           </div>
         </div>
       </header>
+      <div v-if="showAiNotice" class="ai-notice">
+        <span class="ai-chip">AI</span>
+        <span>{{ t("当前语言内容由 AI 翻译，可能存在不准确。如发现错误，请前往 GitHub 反馈。") }}</span>
+      </div>
       <div v-if="lowGpuEnabled" class="perf-status">
         <div class="perf-status-text">
-          低GPU模式已开启{{ perfPreference === "auto" ? "（自动）" : "（手动）" }}
+          {{ t("低GPU模式已开启") }}{{ perfPreference === "auto" ? t("（自动）") : t("（手动）") }}
         </div>
-        <button class="ghost-button" @click.stop="showSecondaryMenu = true">更多设置</button>
+        <button class="ghost-button" @click.stop="showSecondaryMenu = true">
+          {{ t("更多设置") }}
+        </button>
       </div>
       <div v-if="showPerfNotice" class="perf-notice">
         <div class="perf-notice-text">
-          检测到当前渲染性能较低，已自动切换到低GPU模式以提升滚动流畅度（可在“更多设置”调整）。
+          {{ t("检测到当前渲染性能较低，已自动切换到低GPU模式以提升滚动流畅度（可在“更多设置”调整）。") }}
         </div>
         <div class="perf-notice-actions">
-          <button class="ghost-button" @click="setPerfMode('standard')">恢复效果</button>
-          <button class="about-button perf-keep" @click="setPerfMode('low')">保持低GPU</button>
+          <button class="ghost-button" @click="setPerfMode('standard')">{{ t("恢复效果") }}</button>
+          <button class="about-button perf-keep" @click="setPerfMode('low')">{{ t("保持低GPU") }}</button>
         </div>
       </div>
 
@@ -176,7 +219,7 @@
             :class="{ active: mobilePanel === 'weapons' }"
             @click="mobilePanel = 'weapons'"
           >
-            武器选择 <span class="count">{{ selectedNames.length }}</span>
+            {{ t("武器选择") }} <span class="count">{{ selectedNames.length }}</span>
           </button>
           <button
             class="mobile-tab"
@@ -191,21 +234,21 @@
             }"
             @click="mobilePanel = 'plans'"
           >
-            方案推荐 <span class="count">{{ recommendations.length }}</span>
+            {{ t("方案推荐") }} <span class="count">{{ recommendations.length }}</span>
           </button>
         </div>
-        <div class="mobile-hint">手机端可通过上方标签切换“武器选择 / 方案推荐”。</div>
+        <div class="mobile-hint">{{ t("手机端可通过上方标签切换“武器选择 / 方案推荐”。") }}</div>
         <section class="panel" :class="{ 'panel-hidden': mobilePanel !== 'weapons' }">
           <div class="panel-title">
-            <h2>武器选择器</h2>
+            <h2>{{ t("武器选择器") }}</h2>
             <button class="ghost-button" @click="clearSelection" :disabled="!selectedNames.length">
-              清空
+              {{ t("清空") }}
             </button>
           </div>
 
           <div class="search-box">
             <span>🔍</span>
-            <input v-model="searchQuery" placeholder="搜索武器 / 属性..." />
+            <input v-model="searchQuery" :placeholder="t('搜索武器 / 属性...')" />
           </div>
 
           <div class="filter-toolbar">
@@ -217,22 +260,22 @@
               }"
               @click="toggleShowWeaponAttrs"
             >
-              {{ showWeaponAttrs ? "隐藏属性/排除/备注管理" : "显示属性/排除/备注管理" }}
+              {{ showWeaponAttrs ? t("隐藏属性/排除/备注管理") : t("显示属性/排除/备注管理") }}
             </button>
             <button class="ghost-button" @click="showFilterPanel = !showFilterPanel">
-              {{ showFilterPanel ? "折叠属性筛选" : "展开属性筛选" }}
+              {{ showFilterPanel ? t("折叠属性筛选") : t("展开属性筛选") }}
             </button>
             <button
               class="ghost-button"
               :disabled="!hasAttributeFilters"
               @click="clearAttributeFilters"
             >
-              清空属性筛选
+              {{ t("清空属性筛选") }}
             </button>
           </div>
           <div class="filter-panel" :class="{ 'is-collapsed': !showFilterPanel }">
             <div class="filter-group">
-              <div class="filter-title">基础属性</div>
+              <div class="filter-title">{{ t("基础属性") }}</div>
               <div class="filter-chips">
                 <button
                   v-for="value in s1Options"
@@ -246,7 +289,7 @@
               </div>
             </div>
             <div class="filter-group">
-              <div class="filter-title">附加属性</div>
+              <div class="filter-title">{{ t("附加属性") }}</div>
               <div class="filter-chips">
                 <button
                   v-for="value in s2Options"
@@ -255,12 +298,12 @@
                   :class="{ 'is-active': filterS2.includes(value) }"
                   @click="toggleFilterValue('s2', value)"
                 >
-                  {{ value }}
+                  {{ tTerm("s2", value) }}
                 </button>
               </div>
             </div>
             <div class="filter-group">
-              <div class="filter-title">技能属性</div>
+              <div class="filter-title">{{ t("技能属性") }}</div>
               <div class="filter-chips">
                 <button
                   v-for="option in s3OptionEntries"
@@ -270,28 +313,28 @@
                     'is-active': filterS3.includes(option.value),
                     'is-disabled': option.isEmpty,
                   }"
-                  :title="option.isEmpty ? '当前武器暂无该词条' : ''"
+                  :title="option.isEmpty ? t('当前武器暂无该词条') : ''"
                   @click="option.isEmpty ? null : toggleFilterValue('s3', option.value)"
                 >
-                  <span>{{ option.value }}</span>
-                  <span v-if="option.isEmpty" class="chip-meta">暂无</span>
+                  <span>{{ tTerm("s3", option.value) }}</span>
+                  <span v-if="option.isEmpty" class="chip-meta">{{ t("暂无") }}</span>
                 </button>
               </div>
-              <div class="filter-hint">灰色词条代表当前暂无武器</div>
+              <div class="filter-hint">{{ t("灰色词条代表当前暂无武器") }}</div>
             </div>
           </div>
 
           <div class="tag-row">
-            <span v-if="!selectedNames.length" class="tag">未选择任何武器</span>
+            <span v-if="!selectedNames.length" class="tag">{{ t("未选择任何武器") }}</span>
             <span
               v-for="weapon in selectedWeaponRows"
               :key="weapon.name"
               class="tag"
               :class="{ 'is-excluded': weapon.isExcluded }"
-              :title="weapon.note ? `备注：${weapon.note}` : ''"
+              :title="weapon.note ? `${t('备注：')}${weapon.note}` : ''"
             >
-              {{ weapon.name }}
-              <span v-if="weapon.isExcluded" class="tag-note">排除</span>
+              {{ tTerm("weapon", weapon.name) }}
+              <span v-if="weapon.isExcluded" class="tag-note">{{ t("排除") }}</span>
               <button @click.stop="toggleWeapon(weapon, 'tag')">✕</button>
             </span>
           </div>
@@ -319,7 +362,7 @@
                 <span v-else class="weapon-fallback-large">{{ weapon.rarity }}★</span>
               </div>
               <div class="weapon-band"></div>
-              <div class="weapon-name">{{ weapon.name }}</div>
+              <div class="weapon-name">{{ tTerm("weapon", weapon.name) }}</div>
             </div>
           </div>
 
@@ -337,14 +380,14 @@
                 <span class="rarity" :style="rarityTextStyle(tutorialWeapon.rarity)">
                   {{ tutorialWeapon.rarity }}★
                 </span>
-                <span class="badge tutorial-badge">教学示例</span>
-                <span class="badge muted" v-if="tutorialExcluded">排除</span>
+                <span class="badge tutorial-badge">{{ t("教学示例") }}</span>
+                <span class="badge muted" v-if="tutorialExcluded">{{ t("排除") }}</span>
               </div>
               <div class="scheme-weapon-attrs">
-                <span class="attr-value attr-type">{{ tutorialWeapon.type }}</span>
+                <span class="attr-value attr-type">{{ t(tutorialWeapon.type) }}</span>
                 <span class="attr-value">{{ formatS1(tutorialWeapon.s1) }}</span>
-                <span class="attr-value">{{ tutorialWeapon.s2 }}</span>
-                <span class="attr-value">{{ tutorialWeapon.s3 }}</span>
+                <span class="attr-value">{{ t(tutorialWeapon.s2) }}</span>
+                <span class="attr-value">{{ t(tutorialWeapon.s3) }}</span>
               </div>
               <div class="weapon-exclude-row" @click.stop>
                 <button
@@ -355,7 +398,7 @@
                   }"
                   @click.stop="toggleTutorialExclude"
                 >
-                  {{ tutorialExcluded ? "取消排除" : "标记排除" }}
+                  {{ tutorialExcluded ? t("取消排除") : t("标记排除") }}
                 </button>
                 <input
                   class="exclude-note-input"
@@ -365,7 +408,7 @@
                   }"
                   type="text"
                   maxlength="30"
-                  placeholder="备注（可选）"
+                  :placeholder="t('备注（可选）')"
                   :value="tutorialNote"
                   @focus="markTutorialNoteTouched"
                   @input="updateTutorialNote($event.target.value)"
@@ -390,15 +433,15 @@
                   <img v-if="hasImage(weapon)" :src="weaponImageSrc(weapon)" :alt="weapon.name" />
                   <span v-else class="weapon-fallback">{{ weapon.rarity }}★</span>
                 </div>
-                <span>{{ weapon.name }}</span>
+                <span>{{ tTerm("weapon", weapon.name) }}</span>
                 <span class="rarity" :style="rarityTextStyle(weapon.rarity)">
                   {{ weapon.rarity }}★
                 </span>
-                <span class="badge" v-if="selectedNameSet.has(weapon.name)">已选</span>
-                <span class="badge muted" v-if="isExcluded(weapon.name)">排除</span>
+                <span class="badge" v-if="selectedNameSet.has(weapon.name)">{{ t("已选") }}</span>
+                <span class="badge muted" v-if="isExcluded(weapon.name)">{{ t("排除") }}</span>
               </div>
               <div class="scheme-weapon-attrs">
-                <span class="attr-value attr-type">{{ weapon.type }}</span>
+                <span class="attr-value attr-type">{{ tTerm("type", weapon.type) }}</span>
                 <span
                   class="attr-value"
                   :class="{ 'base-lock': filterS1.length && filterS1.includes(weapon.s1) }"
@@ -409,13 +452,13 @@
                   class="attr-value"
                   :class="{ locked: filterS2.length && filterS2.includes(weapon.s2) }"
                 >
-                  {{ weapon.s2 }}
+                  {{ tTerm("s2", weapon.s2) }}
                 </span>
                 <span
                   class="attr-value"
                   :class="{ locked: filterS3.length && filterS3.includes(weapon.s3) }"
                 >
-                  {{ weapon.s3 }}
+                  {{ tTerm("s3", weapon.s3) }}
                 </span>
               </div>
               <div class="weapon-exclude-row" @click.stop>
@@ -424,14 +467,14 @@
                   :class="{ active: isExcluded(weapon.name) }"
                   @click.stop="toggleExclude(weapon)"
                 >
-                  {{ isExcluded(weapon.name) ? "取消排除" : "标记排除" }}
+                  {{ isExcluded(weapon.name) ? t("取消排除") : t("标记排除") }}
                 </button>
                 <input
                   class="exclude-note-input"
                   :class="{ 'is-excluded': isExcluded(weapon.name) }"
                   type="text"
                   maxlength="30"
-                  placeholder="备注（可选）"
+                  :placeholder="t('备注（可选）')"
                   :value="getWeaponNote(weapon.name)"
                   @input="updateWeaponNote(weapon, $event.target.value)"
                 />
@@ -442,40 +485,44 @@
 
         <section class="panel" :class="{ 'panel-hidden': mobilePanel !== 'plans' }">
           <div class="panel-title">
-            <h2>方案推荐列表</h2>
+            <h2>{{ t("方案推荐列表") }}</h2>
             <div class="panel-actions">
-              <div class="pill">已选 {{ selectedWeapons.length }} 把</div>
+              <div class="pill">{{ t("已选") }} {{ selectedWeapons.length }} {{ t("把") }}</div>
               <button
                 v-if="extraRecommendations.length"
                 class="ghost-button"
                 @click="showAllSchemes = !showAllSchemes"
               >
-                {{ showAllSchemes ? "收起其他方案" : `展开其他方案（${extraRecommendations.length}）` }}
+                {{
+                  showAllSchemes
+                    ? t("收起其他方案")
+                    : t("展开其他方案（{count}）", { count: extraRecommendations.length })
+                }}
               </button>
             </div>
           </div>
 
           <div v-if="!selectedWeapons.length" class="empty">
-            请选择至少一把武器，系统将自动推荐可共刷的副本方案。
+            {{ t("请选择至少一把武器，系统将自动推荐可共刷的副本方案。") }}
           </div>
 
           <div v-else-if="!recommendations.length" class="recommendations">
             <div class="card">
               <div class="card-header">
                 <div>
-                  <div class="card-title">当前组合无可用方案</div>
-                  <div class="hint">附加/技能属性无法统一锁定，或副本池不覆盖所需词条。</div>
+                  <div class="card-title">{{ t("当前组合无可用方案") }}</div>
+                  <div class="hint">{{ t("附加/技能属性无法统一锁定，或副本池不覆盖所需词条。") }}</div>
                 </div>
                 <div class="strategy-row">
-                  <span class="pill warn">请拆分批次刷取</span>
+                  <span class="pill warn">{{ t("请拆分批次刷取") }}</span>
                 </div>
               </div>
 
               <div class="lock-summary" v-if="fallbackPlan">
-                <div class="lock-title">锁定方案（仅显示冲突提示）</div>
+                <div class="lock-title">{{ t("锁定方案（仅显示冲突提示）") }}</div>
                 <div class="lock-items">
                   <span class="lock-chip" :class="{ warn: fallbackPlan.baseOverflow }">
-                    {{ fallbackPlan.baseOverflow ? "基础属性冲突" : "基础属性" }}：
+                    {{ fallbackPlan.baseOverflow ? t("基础属性冲突") : t("基础属性") }}：
                     {{
                       (fallbackPlan.baseOverflow ? fallbackPlan.baseAllLabels : fallbackPlan.basePickLabels).join(
                         " / "
@@ -483,15 +530,15 @@
                     }}
                   </span>
                   <span class="lock-chip warn" v-if="fallbackPlan.s2Conflict">
-                    附加属性冲突（无法统一锁定）
+                    {{ t("附加属性冲突（无法统一锁定）") }}
                   </span>
                   <span class="lock-chip warn" v-if="fallbackPlan.s3Conflict">
-                    技能属性冲突（无法统一锁定）
+                    {{ t("技能属性冲突（无法统一锁定）") }}
                   </span>
                 </div>
               </div>
 
-              <div class="hint">已选武器（冲突项标红）</div>
+              <div class="hint">{{ t("已选武器（冲突项标红）") }}</div>
               <div class="scheme-weapon-list">
                 <div
                   v-for="weapon in fallbackPlan.weaponRows"
@@ -499,14 +546,16 @@
                   class="scheme-weapon-item is-selected"
                 >
                   <div class="scheme-weapon-title">
-                    <span>{{ weapon.name }}</span>
+                    <span>{{ tTerm("weapon", weapon.name) }}</span>
                     <span class="rarity" :style="rarityTextStyle(weapon.rarity)">
                       {{ weapon.rarity }}★
                     </span>
-                    <span class="badge">已选</span>
+                    <span class="badge">{{ t("已选") }}</span>
                   </div>
                   <div class="scheme-weapon-attrs">
-                    <span class="attr-value attr-type">类型：{{ weapon.type }}</span>
+                    <span class="attr-value attr-type"
+                      >{{ t("类型") }}：{{ tTerm("type", weapon.type) }}</span
+                    >
                     <span
                       class="attr-value"
                       :class="{
@@ -514,13 +563,13 @@
                         conflict: weapon.baseConflict,
                       }"
                     >
-                      基础属性：{{ formatS1(weapon.s1) }}
+                      {{ t("基础属性") }}：{{ formatS1(weapon.s1) }}
                     </span>
                     <span class="attr-value" :class="{ conflict: fallbackPlan.s2Conflict }">
-                      附加属性：{{ weapon.s2 }}
+                      {{ t("附加属性") }}：{{ tTerm("s2", weapon.s2) }}
                     </span>
                     <span class="attr-value" :class="{ conflict: fallbackPlan.s3Conflict }">
-                      技能属性：{{ weapon.s3 }}
+                      {{ t("技能属性") }}：{{ tTerm("s3", weapon.s3) }}
                     </span>
                   </div>
                   <div
@@ -528,7 +577,7 @@
                     class="exclude-note-text"
                     :class="{ 'is-excluded': isExcluded(weapon.name) }"
                   >
-                    备注：{{ getWeaponNote(weapon.name) }}
+                    {{ t("备注：") }}{{ getWeaponNote(weapon.name) }}
                   </div>
                 </div>
               </div>
@@ -539,20 +588,24 @@
             <div v-if="coverageSummary && coverageSummary.hasGap" class="card">
               <div class="card-header">
                 <div>
-                  <div class="card-title">当前组合需要分批刷取</div>
+                  <div class="card-title">{{ t("当前组合需要分批刷取") }}</div>
                   <div class="hint">
-                    该组合无法在同一批次完成，已生成 {{ recommendations.length }} 套方案覆盖全部已选武器，
-                    并按效率优先排序。<span class="hint-accent">
-                      当前展示 {{ displayRecommendations.length }} 套方案已满足全部已选武器刷取要求
+                    {{ t("该组合无法在同一批次完成，已生成 {count} 套方案覆盖全部已选武器，并按效率优先排序。", {
+                      count: recommendations.length,
+                    }) }}
+                    <span class="hint-accent">
+                      {{ t("当前展示 {count} 套方案已满足全部已选武器刷取要求", {
+                        count: displayRecommendations.length,
+                      }) }}
                     </span>
-                    请在下方查看。如需查看更多方案请点击展开其他方案按钮。
+                    {{ t("请在下方查看。如需查看更多方案请点击展开其他方案按钮。") }}
                   </div>
                 </div>
               </div>
             </div>
             <template v-for="(card, index) in displayRecommendations" :key="card.schemeKey">
               <div v-if="index === displayDividerIndex" class="scheme-divider">
-                <span>其他方案</span>
+                <span>{{ t("其他方案") }}</span>
               </div>
               <div
                 class="card"
@@ -574,58 +627,85 @@
               >
               <div class="card-header">
                 <div>
-                  <div class="card-title">{{ card.dungeon.name }}</div>
+                  <div class="card-title">{{ tTerm("dungeon", card.dungeon.name) }}</div>
                   <div class="hint" v-if="card.displaySelectedMatchCount === selectedWeapons.length">
-                    附加属性池 / 技能属性池 均已满足所选武器需求
+                    {{ t("附加属性池 / 技能属性池 均已满足所选武器需求") }}
                   </div>
                   <div class="hint" v-else>
-                    已覆盖 {{ card.displaySelectedMatchCount }} / {{ selectedWeapons.length }} 把已选武器，剩余需拆分刷取。
+                    {{
+                      t("已覆盖 {match} / {total} 把已选武器，剩余需拆分刷取。", {
+                        match: card.displaySelectedMatchCount,
+                        total: selectedWeapons.length,
+                      })
+                    }}
                   </div>
                   <details
                     v-if="card.displaySelectedMissingNames.length"
                     class="missing-details"
                     :open="selectedWeapons.length > 1"
                   >
-                    <summary>未覆盖 {{ card.displaySelectedMissingNames.length }} 把（基础属性）</summary>
+                    <summary>
+                      {{ t("未覆盖") }} {{ card.displaySelectedMissingNames.length }} {{ t("把") }}（{{
+                        t("基础属性")
+                      }}）
+                    </summary>
                     <div class="missing-tags">
                       <span
                         v-for="name in card.displaySelectedMissingNames"
                         :key="name"
                         class="missing-tag"
                       >
-                        {{ name }}
+                        {{ tTerm("weapon", name) }}
                       </span>
                     </div>
                   </details>
                 </div>
                 <div class="strategy-row">
                   <span class="pill wide">
-                    可同时刷武器：{{ card.displayWeaponCount }} 把（覆盖已选 {{ card.displaySelectedMatchCount }} 把）
+                    {{
+                      t("可同时刷武器：{count} 把（覆盖已选 {match} 把）", {
+                        count: card.displayWeaponCount,
+                        match: card.displaySelectedMatchCount,
+                      })
+                    }}
                   </span>
                   <span class="pill" v-if="card.maxWeaponCount !== card.displayWeaponCount">
-                    最多可刷：{{ card.maxWeaponCount }} 把
+                    {{ t("最多可刷：{count} 把", { count: card.maxWeaponCount }) }}
                   </span>
                   <span class="pill warn" v-if="card.displaySelectedMissingNames.length">
-                    未覆盖 {{ card.displaySelectedMissingNames.length }}
+                    {{
+                      t("未覆盖 {count}", { count: card.displaySelectedMissingNames.length })
+                    }}
                   </span>
                   <span
                     class="pill warn"
                     v-if="card.conflictSelected && card.conflictSelected.length"
                   >
-                    冲突 {{ card.conflictSelected.length }}
+                    {{ t("冲突 {count}", { count: card.conflictSelected.length }) }}
                   </span>
                 </div>
               </div>
               <div class="lock-summary">
-                <div class="lock-title">锁定方案</div>
+                <div class="lock-title">{{ t("锁定方案") }}</div>
                 <div class="lock-items">
                   <span
                     class="lock-chip"
                     :class="{ warn: card.manualPickNeeded || card.manualPickOverflow }"
                   >
-                    基础属性：{{ card.basePickLabels.join(" / ") }}
+                    {{ t("基础属性") }}：{{
+                      card.basePickLabels
+                        .map((label) =>
+                          label === "请手动选择" || label === "任意属性" ? t(label) : formatS1(label)
+                        )
+                        .join(" / ")
+                    }}
                   </span>
-                  <span class="lock-chip attr">锁定{{ card.lockLabel }}：{{ card.lockValue }}</span>
+                  <span class="lock-chip attr">{{
+                    t("锁定{label}：{value}", {
+                      label: t(card.lockLabel),
+                      value: tTerm(card.lockType, card.lockValue),
+                    })
+                  }}</span>
                 </div>
                 <div
                   class="hint"
@@ -633,13 +713,16 @@
                   :class="{ 'status-warn': card.manualPickOverflow }"
                 >
                   <span v-if="card.manualPickOverflow">
-                    已选择超过三种基础属性，请放弃一种属性。
+                    {{ t("已选择超过三种基础属性，请放弃一种属性。") }}
                   </span>
                   <span v-else-if="card.manualPickNeeded">
-                    基础属性超过三选，请在下方点击武器选择你想要刷取的基础属性（还需选择
-                    {{ card.manualPickNeeded }} 个）
+                    {{
+                      t("基础属性超过三选，请在下方点击武器选择你想要刷取的基础属性（还需选择 {count} 个）", {
+                        count: card.manualPickNeeded,
+                      })
+                    }}
                   </span>
-                  <span v-else>基础属性已锁定，可同时刷范围已更新。</span>
+                  <span v-else>{{ t("基础属性已锁定，可同时刷范围已更新。") }}</span>
                 </div>
               </div>
 
@@ -647,8 +730,8 @@
                 <button class="ghost-button" @click="toggleConflictOpen(card.schemeKey)">
                   {{
                     isConflictOpen(card.schemeKey)
-                      ? "点击收起冲突已选武器"
-                      : `点击展开冲突已选武器（${card.conflictSelected.length}）`
+                      ? t("点击收起冲突已选武器")
+                      : t("点击展开冲突已选武器（{count}）", { count: card.conflictSelected.length })
                   }}
                 </button>
                 <transition name="collapse">
@@ -673,25 +756,29 @@
                           />
                           <span v-else class="weapon-fallback">{{ weapon.rarity }}★</span>
                         </div>
-                        <span>{{ weapon.name }}</span>
+                        <span>{{ tTerm("weapon", weapon.name) }}</span>
                         <span class="rarity" :style="rarityTextStyle(weapon.rarity)">
                           {{ weapon.rarity }}★
                         </span>
-                        <span class="badge warn">冲突</span>
+                        <span class="badge warn">{{ t("冲突") }}</span>
                       </div>
                       <div class="scheme-weapon-attrs">
-                        <span class="attr-value attr-type">类型：{{ weapon.type }}</span>
-                        <span class="attr-value">基础属性：{{ formatS1(weapon.s1) }}</span>
+                        <span class="attr-value attr-type"
+                          >{{ t("类型") }}：{{ tTerm("type", weapon.type) }}</span
+                        >
+                        <span class="attr-value">{{ t("基础属性") }}：{{ formatS1(weapon.s1) }}</span>
                         <span class="attr-value" :class="{ conflict: weapon.conflictS2 }">
-                          附加属性：{{ weapon.s2 }}
+                          {{ t("附加属性") }}：{{ tTerm("s2", weapon.s2) }}
                         </span>
                         <span class="attr-value" :class="{ conflict: weapon.conflictS3 }">
-                          技能属性：{{ weapon.s3 }}
+                          {{ t("技能属性") }}：{{ tTerm("s3", weapon.s3) }}
                         </span>
                       </div>
-                      <div class="conflict-reason">冲突原因：{{ weapon.conflictReason }}</div>
+                      <div class="conflict-reason">
+                        {{ t("冲突原因：{reason}", { reason: weapon.conflictReason }) }}
+                      </div>
                       <div v-if="weapon.note" class="exclude-note-text">
-                        备注：{{ weapon.note }}
+                        {{ t("备注：") }}{{ weapon.note }}
                       </div>
                     </div>
                   </div>
@@ -715,7 +802,7 @@
                       card.schemeKey === tutorialTargetSchemeKey &&
                       isTutorialGuideWeapon(weapon.name),
                   }"
-                  :title="card.baseOverflow ? '点击选择基础属性' : ''"
+                  :title="card.baseOverflow ? t('点击选择基础属性') : ''"
                   @click="toggleSchemeBasePick(card, weapon)"
                 >
                   <div class="scheme-weapon-title">
@@ -723,30 +810,32 @@
                       <img v-if="hasImage(weapon)" :src="weaponImageSrc(weapon)" :alt="weapon.name" />
                       <span v-else class="weapon-fallback">{{ weapon.rarity }}★</span>
                     </div>
-                    <span>{{ weapon.name }}</span>
+                    <span>{{ tTerm("weapon", weapon.name) }}</span>
                     <span class="rarity" :style="rarityTextStyle(weapon.rarity)">
                       {{ weapon.rarity }}★
                     </span>
-                    <span v-if="weapon.isSelected" class="badge">已选</span>
-                    <span v-if="weapon.isExcluded" class="badge muted">排除</span>
+                    <span v-if="weapon.isSelected" class="badge">{{ t("已选") }}</span>
+                    <span v-if="weapon.isExcluded" class="badge muted">{{ t("排除") }}</span>
                   </div>
                   <div class="scheme-weapon-attrs">
-                    <span class="attr-value attr-type">类型：{{ weapon.type }}</span>
+                    <span class="attr-value attr-type"
+                      >{{ t("类型") }}：{{ tTerm("type", weapon.type) }}</span
+                    >
                     <span
                       class="attr-value"
                       :class="{ 'base-lock': weapon.baseLocked, conflict: weapon.baseConflict }"
                     >
-                      基础属性：{{ formatS1(weapon.s1) }}
+                      {{ t("基础属性") }}：{{ formatS1(weapon.s1) }}
                     </span>
                     <span class="attr-value" :class="{ locked: card.lockType === 's2' }">
-                      附加属性：{{ weapon.s2 }}
+                      {{ t("附加属性") }}：{{ tTerm("s2", weapon.s2) }}
                     </span>
                     <span class="attr-value" :class="{ locked: card.lockType === 's3' }">
-                      技能属性：{{ weapon.s3 }}
+                      {{ t("技能属性") }}：{{ tTerm("s3", weapon.s3) }}
                     </span>
                   </div>
                   <div v-if="weapon.note" class="exclude-note-text" :class="{ 'is-excluded': weapon.isExcluded }">
-                    备注：{{ weapon.note }}
+                    {{ t("备注：") }}{{ weapon.note }}
                   </div>
                 </div>
               </div>
@@ -755,7 +844,11 @@
             </template>
             <div class="expand-row" v-if="extraRecommendations.length">
               <button class="ghost-button" @click="showAllSchemes = !showAllSchemes">
-                {{ showAllSchemes ? "收起其他方案" : `展开其他方案（${extraRecommendations.length}）` }}
+                {{
+                  showAllSchemes
+                    ? t("收起其他方案")
+                    : t("展开其他方案（{count}）", { count: extraRecommendations.length })
+                }}
               </button>
             </div>
           </div>
@@ -767,7 +860,9 @@
           <div class="about-card notice-card">
             <h3>{{ announcement.title }}</h3>
             <div class="notice-body">
-              <p class="notice-meta">更新日期：{{ announcement.date }}</p>
+              <p class="notice-meta">
+                {{ t("更新日期：{date}", { date: announcement.date }) }}
+              </p>
               <ul class="notice-list">
                 <li v-for="item in announcement.items" :key="item">{{ item }}</li>
               </ul>
@@ -780,19 +875,19 @@
                   target="_blank"
                   rel="noopener"
                 >
-                  加入 QQ 群
+                  {{ t("加入 QQ 群") }}
                 </a>
                 <div class="notice-qq-info">
-                  QQ 群：{{ announcement.qqGroup }}
+                  {{ t("QQ 群：{group}", { group: announcement.qqGroup }) }}
                   <span v-if="announcement.qqNote">（{{ announcement.qqNote }}）</span>
                 </div>
               </div>
               <label class="notice-skip">
                 <input type="checkbox" v-model="skipNotice" />
-                本次公告不再显示
+                {{ t("本次公告不再显示") }}
               </label>
               <div class="about-actions">
-                <button class="ghost-button" @click="closeNotice">关闭</button>
+                <button class="ghost-button" @click="closeNotice">{{ t("关闭") }}</button>
               </div>
             </div>
           </div>
@@ -805,7 +900,7 @@
             <h3>{{ changelog.title }}</h3>
             <div class="changelog-body">
               <div v-if="!changelog.entries || !changelog.entries.length" class="empty">
-                暂无更新日志。
+                {{ t("暂无更新日志。") }}
               </div>
               <div
                 v-else
@@ -820,7 +915,7 @@
               </div>
             </div>
             <div class="about-actions">
-              <button class="ghost-button" @click="showChangelog = false">关闭</button>
+              <button class="ghost-button" @click="showChangelog = false">{{ t("关闭") }}</button>
             </div>
           </div>
         </div>
@@ -833,7 +928,9 @@
             <p v-for="(line, index) in aboutContent.paragraphs" :key="`about-line-${index}`">
               {{ line }}
             </p>
-            <p v-if="aboutContent.author">作者：{{ aboutContent.author }}</p>
+            <p v-if="aboutContent.author">
+              {{ t("作者：{name}", { name: aboutContent.author }) }}
+            </p>
             <div class="about-links" v-if="aboutContent.links && aboutContent.links.length">
               <a
                 v-for="link in aboutContent.links"
@@ -849,7 +946,7 @@
               </a>
             </div>
             <div class="about-thanks" v-if="aboutContent.thanks && aboutContent.thanks.length">
-              <h4>感谢</h4>
+              <h4>{{ t("感谢") }}</h4>
               <ul class="about-thanks-list">
                 <li
                   v-for="(entry, index) in aboutContent.thanks"
@@ -868,7 +965,7 @@
               </ul>
             </div>
             <div class="about-actions">
-              <button class="ghost-button" @click="showAbout = false">关闭</button>
+              <button class="ghost-button" @click="showAbout = false">{{ t("关闭") }}</button>
             </div>
           </div>
         </div>
@@ -879,7 +976,10 @@
           <div class="tutorial-card">
             <div class="tutorial-head-row">
               <div class="tutorial-step">
-                新手教程 {{ tutorialStepIndex + 1 }} / {{ tutorialTotalSteps }}
+                {{ t("新手教程 {current} / {total}", {
+                  current: tutorialStepIndex + 1,
+                  total: tutorialTotalSteps,
+                }) }}
               </div>
               <button
                 v-if="tutorialBodyCanCollapse"
@@ -887,7 +987,7 @@
                 :class="{ 'tutorial-highlight': tutorialCollapseHighlight }"
                 @click="toggleTutorialBody"
               >
-                {{ tutorialBodyCollapsed ? "展开说明" : "收起说明" }}
+                {{ tutorialBodyCollapsed ? t("展开说明") : t("收起说明") }}
               </button>
             </div>
             <h3>{{ tutorialStep.title }}</h3>
@@ -904,8 +1004,8 @@
               {{ line }}
             </p>
             <div class="tutorial-status">
-              <span v-if="tutorialStepReady">已完成，可继续。</span>
-              <span v-else>请按提示完成当前操作。</span>
+              <span v-if="tutorialStepReady">{{ t("已完成，可继续。") }}</span>
+              <span v-else>{{ t("请按提示完成当前操作。") }}</span>
             </div>
             <div class="tutorial-actions">
               <button
@@ -913,22 +1013,28 @@
                 @click="prevTutorialStep"
                 :disabled="tutorialStepIndex === 0"
               >
-                上一步
+                {{ t("上一步") }}
               </button>
-              <button class="ghost-button" @click="openTutorialSkipConfirm">跳过全部</button>
+              <button class="ghost-button" @click="openTutorialSkipConfirm">
+                {{ t("跳过全部") }}
+              </button>
               <button
                 v-if="tutorialStepKey === 'base-pick' && !tutorialStepReady"
                 class="ghost-button"
                 @click="skipTutorialStep"
               >
-                跳过本步
+                {{ t("跳过本步") }}
               </button>
               <button
                 class="about-button"
                 @click="nextTutorialStep"
                 :disabled="!tutorialStepReady"
               >
-                {{ tutorialStepIndex + 1 >= tutorialTotalSteps ? "完成" : "下一步" }}
+                {{
+                  tutorialStepIndex + 1 >= tutorialTotalSteps
+                    ? t("完成")
+                    : t("下一步")
+                }}
               </button>
             </div>
           </div>
@@ -938,12 +1044,14 @@
       <transition name="fade-scale">
         <div v-if="showTutorialSkipConfirm" class="about-overlay" @click.self="closeTutorialSkipConfirm">
           <div class="about-card tutorial-modal">
-            <h3>跳过新手教程？</h3>
-            <p>确定跳过当前版本的新手教程吗？此操作仅对当前版本生效。</p>
-            <p class="tutorial-note">之后可在“更多设置”中再次体验。</p>
+            <h3>{{ t("跳过新手教程？") }}</h3>
+            <p>{{ t("确定跳过当前版本的新手教程吗？此操作仅对当前版本生效。") }}</p>
+            <p class="tutorial-note">{{ t("之后可在“更多设置”中再次体验。") }}</p>
             <div class="about-actions">
-              <button class="ghost-button" @click="closeTutorialSkipConfirm">取消</button>
-              <button class="about-button" @click="confirmTutorialSkipAll">跳过全部</button>
+              <button class="ghost-button" @click="closeTutorialSkipConfirm">{{ t("取消") }}</button>
+              <button class="about-button" @click="confirmTutorialSkipAll">
+                {{ t("跳过全部") }}
+              </button>
             </div>
           </div>
         </div>
@@ -952,13 +1060,13 @@
       <transition name="fade-scale">
         <div v-if="showTutorialComplete" class="tutorial-float">
           <div class="tutorial-card tutorial-complete-card">
-            <div class="tutorial-step">新手教程完成</div>
-            <h3>恭喜完成新手教程</h3>
-            <p>你已完成当前版本的新手教程。</p>
-            <p>如果你认为新手教程需要改进欢迎提供建议。</p>
-            <p class="tutorial-note">可在“更多设置”中再次体验。</p>
+            <div class="tutorial-step">{{ t("新手教程完成") }}</div>
+            <h3>{{ t("恭喜完成新手教程") }}</h3>
+            <p>{{ t("你已完成当前版本的新手教程。") }}</p>
+            <p>{{ t("如果你认为新手教程需要改进欢迎提供建议。") }}</p>
+            <p class="tutorial-note">{{ t("可在“更多设置”中再次体验。") }}</p>
             <div class="tutorial-actions">
-              <button class="about-button" @click="closeTutorialComplete">知道了</button>
+              <button class="about-button" @click="closeTutorialComplete">{{ t("知道了") }}</button>
             </div>
           </div>
         </div>
@@ -966,18 +1074,20 @@
 
       <div v-if="showDomainWarning" class="domain-overlay">
         <div class="domain-card">
-          <h3>非官方域名提示</h3>
+          <h3>{{ t("非官方域名提示") }}</h3>
           <p>
-            当前访问域名并非
+            {{ t("当前访问域名并非") }}
             <a class="domain-link" href="https://end.canmoe.com" target="_blank" rel="noreferrer">
               end.canmoe.com
             </a>
-            ，请确认是否为可信来源，谨防恶意映射或页面被内嵌篡改。
+            {{ t("请确认是否为可信来源，谨防恶意映射或页面被内嵌篡改。") }}
           </p>
-          <p class="domain-chip">当前页面域名：{{ currentHost }}</p>
-          <p v-if="isEmbedded" class="domain-chip">上层页面域名：{{ embedHostLabel }}</p>
-          <p v-if="isEmbedded && !isEmbedTrusted">该域名未在内嵌白名单内。</p>
-          <p v-if="isEmbedded">检测到页面被内嵌（iframe）打开，此提示无法关闭。</p>
+          <p class="domain-chip">{{ t("当前页面域名：{host}", { host: currentHost }) }}</p>
+          <p v-if="isEmbedded" class="domain-chip">
+            {{ t("上层页面域名：{host}", { host: embedHostLabel }) }}
+          </p>
+          <p v-if="isEmbedded && !isEmbedTrusted">{{ t("该域名未在内嵌白名单内。") }}</p>
+          <p v-if="isEmbedded">{{ t("检测到页面被内嵌（iframe）打开，此提示无法关闭。") }}</p>
           <div class="about-actions domain-actions">
             <a
               class="repo-link domain-primary"
@@ -986,7 +1096,7 @@
               rel="noreferrer"
             >
               <span class="repo-chip">OFFICIAL</span>
-              <span>访问官方域名</span>
+              <span>{{ t("访问官方域名") }}</span>
               <span class="repo-arrow">↗</span>
             </a>
             <button
@@ -995,7 +1105,11 @@
               :disabled="warningCountdown > 0"
               @click="dismissDomainWarning"
             >
-              {{ warningCountdown > 0 ? `我已知晓（${warningCountdown}s）` : "我已知晓" }}
+              {{
+                warningCountdown > 0
+                  ? t("我已知晓（{count}s）", { count: warningCountdown })
+                  : t("我已知晓")
+              }}
             </button>
           </div>
         </div>
@@ -1020,6 +1134,10 @@
           loadScript("./data/dungeons.js"),
           loadScript("./data/weapons.js"),
           loadScript("./data/weapon-images.js"),
+          loadScript("./data/i18n.zh-CN.js"),
+          loadScript("./data/i18n.zh-TW.js"),
+          loadScript("./data/i18n.en.js"),
+          loadScript("./data/i18n.ja.js"),
           loadScript("./data/content.js"),
         ]);
         Promise.all([vuePromise, dataPromise])
