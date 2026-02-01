@@ -1343,16 +1343,41 @@
               showAllSchemes.value ? recommendations.value : primaryRecommendations.value
             );
 
-            const displayRecommendations = computed(() => {
+            const reorderForTutorial = (list) => {
               if (!tutorialActive.value || tutorialStepKey.value !== "base-pick") {
-                return visibleRecommendations.value;
+                return list;
               }
               const target = tutorialTargetScheme.value;
-              if (!target) return visibleRecommendations.value;
-              const rest = visibleRecommendations.value.filter(
-                (scheme) => scheme && scheme.schemeKey !== target.schemeKey
-              );
+              if (!target) return list;
+              const targetKey = target.schemeKey;
+              const hasTarget = list.some((scheme) => scheme && scheme.schemeKey === targetKey);
+              if (!hasTarget) return list;
+              const rest = list.filter((scheme) => scheme && scheme.schemeKey !== targetKey);
               return [target, ...rest];
+            };
+
+            const displayPrimaryRecommendations = computed(() =>
+              reorderForTutorial(primaryRecommendations.value)
+            );
+
+            const displayExtraRecommendations = computed(() =>
+              reorderForTutorial(extraRecommendations.value)
+            );
+
+            const displayRecommendations = computed(() => {
+              if (!showAllSchemes.value || !displayExtraRecommendations.value.length) {
+                return displayPrimaryRecommendations.value;
+              }
+              return [
+                ...displayPrimaryRecommendations.value,
+                ...displayExtraRecommendations.value,
+              ];
+            });
+
+            const displayDividerIndex = computed(() => {
+              if (!showAllSchemes.value) return -1;
+              if (!displayExtraRecommendations.value.length) return -1;
+              return displayPrimaryRecommendations.value.length;
             });
 
             const tutorialTargetSchemeKey = computed(
@@ -1978,6 +2003,7 @@
                 extraRecommendations,
                 visibleRecommendations,
                 displayRecommendations,
+                displayDividerIndex,
                 fallbackPlan,
                 toggleWeapon,
                 toggleSchemeBasePick,

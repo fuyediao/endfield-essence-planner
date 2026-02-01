@@ -1813,10 +1813,42 @@
         color: var(--muted);
       }
 
+      .hint-accent {
+        display: inline-block;
+        margin-left: 4px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(77, 214, 201, 0.35);
+        background: rgba(77, 214, 201, 0.12);
+        color: var(--accent-2);
+        font-weight: 600;
+      }
+
       .scheme-weapon-list {
         display: grid;
         gap: 10px;
         margin-top: 12px;
+      }
+
+      .scheme-divider {
+        margin: 18px 0 8px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .scheme-divider::before,
+      .scheme-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .scheme-divider span {
+        white-space: nowrap;
       }
 
       .lock-summary {
@@ -2063,6 +2095,10 @@
         display: none;
       }
 
+      html.low-gpu body::after {
+        display: none;
+      }
+
       html.low-gpu .panel,
       html.low-gpu .about-card,
       html.low-gpu .notice-card,
@@ -2101,4 +2137,30 @@
         outline-offset: 0;
         background: rgba(255, 210, 140, 0.04);
         box-shadow: none;
+      }
+
+      html.low-gpu .weapon-item::before,
+      html.low-gpu .weapon-item.rarity-6 .weapon-band,
+      html.low-gpu .weapon-item.rarity-5 .weapon-band,
+      html.low-gpu .weapon-item.rarity-6 .weapon-name,
+      html.low-gpu .weapon-item.rarity-5 .weapon-name {
+        background-image: none;
+      }
+
+      html.low-gpu .weapon-item::after {
+        display: none;
+      }
+
+      html.low-gpu .weapon-item {
+        background: rgba(12, 14, 18, 0.98);
+      }
+
+      html.low-gpu .weapon-band {
+        background-image: none;
+        background-color: rgba(16, 22, 32, 0.9);
+      }
+
+      html.low-gpu .weapon-name {
+        background-image: none;
+        background-color: rgba(10, 14, 22, 0.86);
       }

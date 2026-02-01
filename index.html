@@ -542,32 +542,36 @@
                   <div class="card-title">当前组合需要分批刷取</div>
                   <div class="hint">
                     该组合无法在同一批次完成，已生成 {{ recommendations.length }} 套方案覆盖全部已选武器，
-                    并按效率优先排序。当前展示 {{ displayRecommendations.length }} 套方案已满足全部已选武器刷取要求，
+                    并按效率优先排序。<span class="hint-accent">
+                      当前展示 {{ displayRecommendations.length }} 套方案已满足全部已选武器刷取要求
+                    </span>
                     请在下方查看。如需查看更多方案请点击展开其他方案按钮。
                   </div>
                 </div>
               </div>
             </div>
-            <div
-              v-for="card in displayRecommendations"
-              :key="card.schemeKey"
-              class="card"
-              :class="{
-                'tutorial-scheme-highlight':
+            <template v-for="(card, index) in displayRecommendations" :key="card.schemeKey">
+              <div v-if="index === displayDividerIndex" class="scheme-divider">
+                <span>其他方案</span>
+              </div>
+              <div
+                class="card"
+                :class="{
+                  'tutorial-scheme-highlight':
+                    tutorialActive &&
+                    tutorialStepKey === 'base-pick' &&
+                    tutorialTargetSchemeKey &&
+                    card.schemeKey === tutorialTargetSchemeKey,
+                }"
+                :ref="
                   tutorialActive &&
                   tutorialStepKey === 'base-pick' &&
                   tutorialTargetSchemeKey &&
-                  card.schemeKey === tutorialTargetSchemeKey,
-              }"
-              :ref="
-                tutorialActive &&
-                tutorialStepKey === 'base-pick' &&
-                tutorialTargetSchemeKey &&
-                card.schemeKey === tutorialTargetSchemeKey
-                  ? 'tutorialSchemeTarget'
-                  : null
-              "
-            >
+                  card.schemeKey === tutorialTargetSchemeKey
+                    ? 'tutorialSchemeTarget'
+                    : null
+                "
+              >
               <div class="card-header">
                 <div>
                   <div class="card-title">{{ card.dungeon.name }}</div>
@@ -747,7 +751,8 @@
                 </div>
               </div>
 
-            </div>
+              </div>
+            </template>
             <div class="expand-row" v-if="extraRecommendations.length">
               <button class="ghost-button" @click="showAllSchemes = !showAllSchemes">
                 {{ showAllSchemes ? "收起其他方案" : `展开其他方案（${extraRecommendations.length}）` }}
