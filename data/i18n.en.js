@@ -197,8 +197,7 @@ window.I18N["en"] = {
       "医疗": "Medicant",
       "切骨": "Fracture",
       "残暴": "Brutality",
-      "夜幕": "Twilight",
-      "暴击提升": "Critical Boost"
+      "夜幕": "Twilight"
     },
     "type": {
       "单手剑": "Sword",
