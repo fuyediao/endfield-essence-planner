@@ -1,0 +1,195 @@
+(function () {
+  const modules = (window.AppModules = window.AppModules || {});
+
+  modules.initBackground = function initBackground(ctx, state) {
+    const { watch, onMounted } = ctx;
+    const storageKey = state.backgroundStorageKey || "planner-bg-image:v1";
+    const apiStorageKey = state.backgroundApiStorageKey || "planner-bg-api:v1";
+    const root = typeof document !== "undefined" ? document.documentElement : null;
+
+    const normalizeUrlValue = (value) => {
+      const trimmed = String(value || "").trim();
+      if (!trimmed) return "";
+      if (/^url\(/i.test(trimmed)) return trimmed;
+      const safe = trimmed.replace(/"/g, '\\"');
+      return `url("${safe}")`;
+    };
+
+    const setRootBackground = (value) => {
+      if (!root) return;
+      const normalized = normalizeUrlValue(value);
+      if (normalized) {
+        root.style.setProperty("--bg-image", normalized);
+      } else {
+        root.style.removeProperty("--bg-image");
+      }
+    };
+
+    const applyBackground = () => {
+      if (!root) return;
+      if (state.lowGpuEnabled && state.lowGpuEnabled.value) {
+        setRootBackground("");
+        return;
+      }
+      const customFile = state.customBackground ? state.customBackground.value : "";
+      if (customFile) {
+        setRootBackground(customFile);
+        return;
+      }
+      const customApi = state.customBackgroundApi ? state.customBackgroundApi.value : "";
+      if (customApi) {
+        setRootBackground(customApi);
+        return;
+      }
+      setRootBackground("");
+    };
+
+    const readStoredBackground = () => {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return;
+        if (raw.startsWith("data:")) {
+          state.customBackground.value = raw;
+          return;
+        }
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          if (typeof parsed.data === "string") {
+            state.customBackground.value = parsed.data;
+          }
+          if (typeof parsed.name === "string") {
+            state.customBackgroundName.value = parsed.name;
+          }
+        }
+      } catch (error) {
+        // ignore storage errors
+      }
+    };
+
+    const readStoredApi = () => {
+      try {
+        const raw = localStorage.getItem(apiStorageKey);
+        if (!raw) return;
+        if (typeof raw === "string") {
+          state.customBackgroundApi.value = raw;
+        }
+      } catch (error) {
+        // ignore storage errors
+      }
+    };
+
+    const saveBackground = () => {
+      if (!state.customBackground.value) {
+        try {
+          localStorage.removeItem(storageKey);
+        } catch (error) {
+          // ignore storage errors
+        }
+        return;
+      }
+      try {
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            data: state.customBackground.value,
+            name: state.customBackgroundName.value || "",
+          })
+        );
+        state.customBackgroundError.value = "";
+      } catch (error) {
+        state.customBackgroundError.value =
+          (state.t && state.t("背景图片过大，无法保存到浏览器。")) ||
+          "背景图片过大，无法保存到浏览器。";
+      }
+    };
+
+    const saveApi = () => {
+      const value = String(state.customBackgroundApi.value || "").trim();
+      state.customBackgroundApi.value = value;
+      if (!value) {
+        try {
+          localStorage.removeItem(apiStorageKey);
+        } catch (error) {
+          // ignore storage errors
+        }
+        return;
+      }
+      try {
+        localStorage.setItem(apiStorageKey, value);
+      } catch (error) {
+        // ignore storage errors
+      }
+    };
+
+    const clearCustomBackground = () => {
+      state.customBackground.value = "";
+      state.customBackgroundName.value = "";
+      state.customBackgroundError.value = "";
+      state.customBackgroundApi.value = "";
+      try {
+        localStorage.removeItem(storageKey);
+        localStorage.removeItem(apiStorageKey);
+      } catch (error) {
+        // ignore storage errors
+      }
+      applyBackground();
+    };
+
+    const handleBackgroundFile = (event) => {
+      const input = event && event.target;
+      const file = input && input.files && input.files[0];
+      if (!file) return;
+      if (!file.type || !file.type.startsWith("image/")) {
+        state.customBackgroundError.value =
+          (state.t && state.t("请选择图片文件。")) || "请选择图片文件。";
+        if (input) input.value = "";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = String(reader.result || "");
+        if (!dataUrl.startsWith("data:")) {
+          state.customBackgroundError.value =
+            (state.t && state.t("读取图片失败。")) || "读取图片失败。";
+          return;
+        }
+        state.customBackground.value = dataUrl;
+        state.customBackgroundName.value = file.name || "";
+        state.customBackgroundError.value = "";
+        saveBackground();
+        applyBackground();
+      };
+      reader.onerror = () => {
+        state.customBackgroundError.value =
+          (state.t && state.t("读取图片失败。")) || "读取图片失败。";
+      };
+      reader.readAsDataURL(file);
+      if (input) input.value = "";
+    };
+
+    readStoredBackground();
+    readStoredApi();
+    applyBackground();
+
+    watch(
+      () => [state.customBackground.value, state.lowGpuEnabled.value],
+      () => applyBackground(),
+      { immediate: true }
+    );
+
+    watch(
+      () => state.customBackgroundApi.value,
+      () => {
+        saveApi();
+        applyBackground();
+      }
+    );
+
+    onMounted(() => {
+      applyBackground();
+    });
+
+    state.handleBackgroundFile = handleBackgroundFile;
+    state.clearCustomBackground = clearCustomBackground;
+  };
+})();

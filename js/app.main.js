@@ -36,6 +36,7 @@
       init("initStorage");
       init("initEmbed");
       init("initPerf");
+      init("initBackground");
       init("initWeapons");
       init("initRecommendations");
       init("initTutorial");
@@ -159,6 +160,12 @@
         showSecondaryMenu: state.showSecondaryMenu,
         showPerfNotice: state.showPerfNotice,
         setPerfMode: state.setPerfMode,
+        customBackground: state.customBackground,
+        customBackgroundName: state.customBackgroundName,
+        customBackgroundError: state.customBackgroundError,
+        customBackgroundApi: state.customBackgroundApi,
+        handleBackgroundFile: state.handleBackgroundFile,
+        clearCustomBackground: state.clearCustomBackground,
       };
     },
   }).mount("#app");

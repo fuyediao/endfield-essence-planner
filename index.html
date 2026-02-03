@@ -220,6 +220,42 @@
                 {{ t("自动模式会根据渲染性能临时切换低GPU模式。") }}
               </div>
               <div class="secondary-item">
+                <div class="secondary-label">{{ t("背景图片") }}</div>
+                <div class="secondary-actions">
+                  <label class="ghost-button secondary-upload">
+                    {{ t("导入图片") }}
+                    <input type="file" accept="image/*" @change="handleBackgroundFile" />
+                  </label>
+                  <button
+                    class="ghost-button"
+                    @click="clearCustomBackground"
+                    :disabled="!customBackground && !customBackgroundApi"
+                  >
+                    {{ t("恢复默认") }}
+                  </button>
+                </div>
+                <div v-if="customBackgroundName" class="secondary-hint secondary-file">
+                  {{ t("当前：") }}{{ customBackgroundName }}
+                </div>
+                <div v-else class="secondary-hint">{{ t("未导入时使用随机背景") }}</div>
+                <input
+                  class="secondary-input"
+                  type="text"
+                  v-model.trim.lazy="customBackgroundApi"
+                  :placeholder="t('自定义图片API（返回图片）')"
+                />
+                <div v-if="customBackgroundApi" class="secondary-hint secondary-file">
+                  {{ t("API：") }}{{ customBackgroundApi }}
+                </div>
+                <div v-else class="secondary-hint">{{ t("未设置API时使用随机背景") }}</div>
+                <div v-if="customBackground" class="secondary-hint">
+                  {{ t("已导入本地图片，将优先使用本地背景。") }}
+                </div>
+                <div v-if="customBackgroundError" class="secondary-hint secondary-warning">
+                  {{ customBackgroundError }}
+                </div>
+              </div>
+              <div class="secondary-item">
                 <div class="secondary-label">{{ t("新手教程") }}</div>
                 <button class="ghost-button" @click="startTutorial(true)">{{ t("再次体验") }}</button>
               </div>

@@ -21,6 +21,7 @@
     "./js/app.storage.js",
     "./js/app.embed.js",
     "./js/app.perf.js",
+    "./js/app.background.js",
     "./js/app.weapons.js",
     "./js/app.recommendations.js",
     "./js/app.tutorial.js",

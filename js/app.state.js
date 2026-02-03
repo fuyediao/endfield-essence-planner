@@ -19,10 +19,17 @@
     state.legacyNoticePrefix = "announcement:skip:";
     state.perfModeStorageKey = "planner-perf-mode:v1";
     state.langStorageKey = "planner-lang";
+    state.backgroundStorageKey = "planner-bg-image:v1";
+    state.backgroundApiStorageKey = "planner-bg-api:v1";
 
     state.lowGpuEnabled = ref(false);
     state.perfPreference = ref("auto");
     state.showPerfNotice = ref(false);
+
+    state.customBackground = ref("");
+    state.customBackgroundName = ref("");
+    state.customBackgroundError = ref("");
+    state.customBackgroundApi = ref("");
 
     state.showNotice = ref(false);
     state.showChangelog = ref(false);
