@@ -43,6 +43,9 @@
       }));
     });
 
+    /** Rarity options for filter: 4, 5, 6 stars (descending order). */
+    const rarityOptions = [6, 5, 4];
+
     const excludedNameSet = computed(() => {
       const names = Object.keys(state.weaponMarks.value || {});
       const excluded = names.filter(
@@ -173,6 +176,16 @@
     };
 
     const toggleFilterValue = (group, value) => {
+      if (group === "rarity") {
+        const arr = state.filterRarity.value;
+        const index = arr.indexOf(value);
+        if (index === -1) {
+          state.filterRarity.value = [...arr, value].sort((a, b) => b - a);
+        } else {
+          state.filterRarity.value = arr.slice(0, index).concat(arr.slice(index + 1));
+        }
+        return;
+      }
       const target = group === "s1" ? state.filterS1 : group === "s2" ? state.filterS2 : state.filterS3;
       const index = target.value.indexOf(value);
       if (index === -1) {
@@ -186,10 +199,15 @@
       state.filterS1.value = [];
       state.filterS2.value = [];
       state.filterS3.value = [];
+      state.filterRarity.value = [];
     };
 
     const hasAttributeFilters = computed(
-      () => state.filterS1.value.length || state.filterS2.value.length || state.filterS3.value.length
+      () =>
+        state.filterS1.value.length ||
+        state.filterS2.value.length ||
+        state.filterS3.value.length ||
+        state.filterRarity.value.length
     );
 
     const filteredWeapons = computed(() => {
@@ -201,6 +219,11 @@
         if (state.filterS1.value.length && !state.filterS1.value.includes(weapon.s1)) return false;
         if (state.filterS2.value.length && !state.filterS2.value.includes(weapon.s2)) return false;
         if (state.filterS3.value.length && !state.filterS3.value.includes(weapon.s3)) return false;
+        if (
+          state.filterRarity.value.length &&
+          !state.filterRarity.value.includes(weapon.rarity)
+        )
+          return false;
         return true;
       });
     });
@@ -208,6 +231,7 @@
     state.s1Options = s1Options;
     state.s2Options = s2Options;
     state.s3OptionEntries = s3OptionEntries;
+    state.rarityOptions = rarityOptions;
     state.excludedNameSet = excludedNameSet;
     state.getWeaponNote = getWeaponNote;
     state.isExcluded = isExcluded;

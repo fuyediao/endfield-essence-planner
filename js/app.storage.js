@@ -9,6 +9,7 @@
     const s1Set = new Set(weapons.map((weapon) => weapon.s1).filter(Boolean));
     const s2Set = new Set(weapons.map((weapon) => weapon.s2).filter(Boolean));
     const s3Set = new Set(weapons.map((weapon) => weapon.s3).filter(Boolean));
+    const raritySet = new Set([4, 5, 6]);
     const mobilePanels = new Set(["weapons", "plans"]);
 
     const sanitizeState = (raw) => {
@@ -57,6 +58,10 @@
       if (s1Filter.length) next.filterS1 = s1Filter;
       if (s2Filter.length) next.filterS2 = s2Filter;
       if (s3Filter.length) next.filterS3 = s3Filter;
+      const rarityFilter = Array.from(
+        new Set(sanitizeArray(raw.filterRarity).filter((v) => raritySet.has(Number(v))))
+      ).map(Number);
+      if (rarityFilter.length) next.filterRarity = rarityFilter;
       return next;
     };
 
@@ -97,6 +102,7 @@
           if (restored.filterS1) state.filterS1.value = restored.filterS1;
           if (restored.filterS2) state.filterS2.value = restored.filterS2;
           if (restored.filterS3) state.filterS3.value = restored.filterS3;
+          if (restored.filterRarity) state.filterRarity.value = restored.filterRarity;
         }
       }
     } catch (error) {
@@ -206,6 +212,7 @@
       filterS1: state.filterS1.value,
       filterS2: state.filterS2.value,
       filterS3: state.filterS3.value,
+      filterRarity: state.filterRarity.value,
       mobilePanel: state.mobilePanel.value,
     }));
 

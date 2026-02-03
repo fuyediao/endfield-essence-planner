@@ -61,6 +61,7 @@ window.I18N["en"] = {
     "折叠属性筛选": "Collapse filters",
     "展开属性筛选": "Expand filters",
     "清空属性筛选": "Clear attribute filters",
+    "星級": "Rarity",
     "基础属性": "Base Attributes",
     "附加属性": "Extra Attributes",
     "技能属性": "Skill Attributes",
@@ -218,6 +219,11 @@ window.I18N["en"] = {
       "切骨": "Fracture",
       "残暴": "Brutality",
       "夜幕": "Twilight"
+    },
+    "rarity": {
+      "4": "4★",
+      "5": "5★",
+      "6": "6★"
     },
     "type": {
       "单手剑": "Sword",
