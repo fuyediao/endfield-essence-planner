@@ -46,6 +46,12 @@
     /** Rarity options for filter: 4, 5, 6 stars (descending order). */
     const rarityOptions = [6, 5, 4];
 
+    const typeOptions = computed(() =>
+      uniqueSorted(weapons.map((w) => w.type).filter(Boolean), (a, b) =>
+        (a || "").localeCompare(b || "", "zh-Hans-CN")
+      )
+    );
+
     const excludedNameSet = computed(() => {
       const names = Object.keys(state.weaponMarks.value || {});
       const excluded = names.filter(
@@ -186,6 +192,16 @@
         }
         return;
       }
+      if (group === "type") {
+        const arr = state.filterType.value;
+        const index = arr.indexOf(value);
+        if (index === -1) {
+          state.filterType.value = [...arr, value];
+        } else {
+          state.filterType.value = arr.slice(0, index).concat(arr.slice(index + 1));
+        }
+        return;
+      }
       const target = group === "s1" ? state.filterS1 : group === "s2" ? state.filterS2 : state.filterS3;
       const index = target.value.indexOf(value);
       if (index === -1) {
@@ -200,6 +216,7 @@
       state.filterS2.value = [];
       state.filterS3.value = [];
       state.filterRarity.value = [];
+      state.filterType.value = [];
     };
 
     const hasAttributeFilters = computed(
@@ -207,7 +224,8 @@
         state.filterS1.value.length ||
         state.filterS2.value.length ||
         state.filterS3.value.length ||
-        state.filterRarity.value.length
+        state.filterRarity.value.length ||
+        state.filterType.value.length
     );
 
     const filteredWeapons = computed(() => {
@@ -224,6 +242,11 @@
           !state.filterRarity.value.includes(weapon.rarity)
         )
           return false;
+        if (
+          state.filterType.value.length &&
+          !state.filterType.value.includes(weapon.type)
+        )
+          return false;
         return true;
       });
     });
@@ -232,6 +255,7 @@
     state.s2Options = s2Options;
     state.s3OptionEntries = s3OptionEntries;
     state.rarityOptions = rarityOptions;
+    state.typeOptions = typeOptions;
     state.excludedNameSet = excludedNameSet;
     state.getWeaponNote = getWeaponNote;
     state.isExcluded = isExcluded;

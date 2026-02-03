@@ -382,6 +382,20 @@
               </div>
             </div>
             <div class="filter-group">
+              <div class="filter-title">{{ t("武器類型") }}</div>
+              <div class="filter-chips">
+                <button
+                  v-for="value in typeOptions"
+                  :key="value"
+                  class="filter-chip"
+                  :class="{ 'is-active': filterType.includes(value) }"
+                  @click="toggleFilterValue('type', value)"
+                >
+                  {{ tTerm("type", value) }}
+                </button>
+              </div>
+            </div>
+            <div class="filter-group">
               <div class="filter-title">{{ t("基础属性") }}</div>
               <div class="filter-chips">
                 <button
@@ -571,6 +585,7 @@
                 filterS2.includes(weapon.s2),
                 filterS3.includes(weapon.s3),
                 filterRarity.includes(weapon.rarity),
+                filterType.includes(weapon.type),
                 getWeaponNote(weapon.name),
               ]"
               :class="{
@@ -673,6 +688,21 @@
                     ? t("收起其他方案")
                     : t("展开其他方案（{count}）", { count: extraRecommendations.length })
                 }}
+              </button>
+            </div>
+          </div>
+          <div v-if="selectedWeapons.length && availableDungeonsForFilter.length" class="dungeon-filter-row">
+            <span class="dungeon-filter-label">{{ t("顯示副本") }}</span>
+            <div class="dungeon-filter-chips">
+              <button
+                v-for="dungeon in availableDungeonsForFilter"
+                :key="dungeon.id"
+                type="button"
+                class="filter-chip dungeon-filter-chip"
+                :class="{ 'is-active': isDungeonFilterActive(dungeon.id) }"
+                @click="toggleDungeonFilter(dungeon.id)"
+              >
+                {{ tTerm("dungeon", dungeon.name) }}
               </button>
             </div>
           </div>
@@ -784,6 +814,12 @@
           </div>
 
           <div v-else class="recommendations">
+            <div
+              v-if="recommendations.length && !recommendationDungeonIds.length"
+              class="dungeon-filter-hint"
+            >
+              {{ t("請選擇要顯示的副本") }}
+            </div>
             <div v-if="coverageSummary && coverageSummary.hasGap" class="card">
               <div class="card-header">
                 <div>

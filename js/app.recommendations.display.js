@@ -4,6 +4,45 @@
   modules.initRecommendationDisplay = function initRecommendationDisplay(ctx, state) {
     const { computed, onMounted, onBeforeUnmount, watch, nextTick } = ctx;
 
+    const dungeonList = Array.isArray(window.DUNGEONS) ? window.DUNGEONS : [];
+
+    /** Dungeons that have at least one recommendation for current selected weapons; only these are shown as filter chips. */
+    const availableDungeonsForFilter = computed(() => {
+      const recs = state.recommendations.value || [];
+      const ids = new Set();
+      recs.forEach((card) => {
+        if (card && card.dungeon && card.dungeon.id) ids.add(card.dungeon.id);
+      });
+      return dungeonList.filter((d) => ids.has(d.id));
+    });
+
+    const filterByDungeon = (list) => {
+      const ids = state.recommendationDungeonIds.value;
+      if (!ids || ids.length === 0) return [];
+      const set = new Set(ids);
+      return list.filter((card) => card && card.dungeon && set.has(card.dungeon.id));
+    };
+
+    const toggleDungeonFilter = (dungeonId) => {
+      const arr = state.recommendationDungeonIds.value;
+      const index = arr.indexOf(dungeonId);
+      if (arr.length === 0) {
+        state.recommendationDungeonIds.value = [dungeonId];
+        return;
+      }
+      if (index >= 0) {
+        const next = arr.filter((_, i) => i !== index);
+        state.recommendationDungeonIds.value = next;
+        return;
+      }
+      state.recommendationDungeonIds.value = [...arr, dungeonId];
+    };
+
+    const isDungeonFilterActive = (dungeonId) => {
+      const ids = state.recommendationDungeonIds.value;
+      return ids.indexOf(dungeonId) >= 0;
+    };
+
     const reorderForTutorial = (list) => {
       if (!state.tutorialActive.value || state.tutorialStepKey.value !== "base-pick") {
         return list;
@@ -26,16 +65,22 @@
     );
 
     const displayRecommendations = computed(() => {
-      if (!state.showAllSchemes.value || !displayExtraRecommendations.value.length) {
-        return displayPrimaryRecommendations.value;
+      const primary = displayPrimaryRecommendations.value;
+      const extra = displayExtraRecommendations.value;
+      const primaryFiltered = filterByDungeon(primary);
+      if (!state.showAllSchemes.value || !extra.length) {
+        return primaryFiltered;
       }
-      return [...displayPrimaryRecommendations.value, ...displayExtraRecommendations.value];
+      const extraFiltered = filterByDungeon(extra);
+      return [...primaryFiltered, ...extraFiltered];
     });
 
     const displayDividerIndex = computed(() => {
       if (!state.showAllSchemes.value) return -1;
       if (!displayExtraRecommendations.value.length) return -1;
-      return displayPrimaryRecommendations.value.length;
+      const primary = displayPrimaryRecommendations.value;
+      const primaryFiltered = filterByDungeon(primary);
+      return primaryFiltered.length;
     });
 
     const updateAttrWrap = () => {
@@ -158,5 +203,9 @@
     state.displayRecommendations = displayRecommendations;
     state.displayDividerIndex = displayDividerIndex;
     state.fallbackPlan = fallbackPlan;
+    state.dungeonList = dungeonList;
+    state.availableDungeonsForFilter = availableDungeonsForFilter;
+    state.toggleDungeonFilter = toggleDungeonFilter;
+    state.isDungeonFilterActive = isDungeonFilterActive;
   };
 })();

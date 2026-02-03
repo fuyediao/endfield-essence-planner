@@ -199,6 +199,41 @@
         justify-content: flex-end;
       }
 
+      .dungeon-filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 12px;
+        margin-bottom: 14px;
+      }
+
+      .dungeon-filter-label {
+        font-size: 13px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .dungeon-filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .dungeon-filter-chip {
+        font-size: 12px;
+        padding: 6px 12px;
+      }
+
+      .dungeon-filter-hint {
+        padding: 10px 14px;
+        border-radius: var(--radius-md);
+        background: rgba(77, 214, 201, 0.08);
+        border: 1px dashed rgba(77, 214, 201, 0.35);
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 12px;
+      }
+
       .ghost-button {
         border: 1px solid var(--stroke);
         background: transparent;

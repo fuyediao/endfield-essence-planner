@@ -10,6 +10,10 @@
     const s2Set = new Set(weapons.map((weapon) => weapon.s2).filter(Boolean));
     const s3Set = new Set(weapons.map((weapon) => weapon.s3).filter(Boolean));
     const raritySet = new Set([4, 5, 6]);
+    const dungeonIdSet = new Set(
+      (Array.isArray(window.DUNGEONS) ? window.DUNGEONS : []).map((d) => d.id)
+    );
+    const typeSet = new Set(weapons.map((w) => w.type).filter(Boolean));
     const mobilePanels = new Set(["weapons", "plans"]);
 
     const sanitizeState = (raw) => {
@@ -62,6 +66,14 @@
         new Set(sanitizeArray(raw.filterRarity).filter((v) => raritySet.has(Number(v))))
       ).map(Number);
       if (rarityFilter.length) next.filterRarity = rarityFilter;
+      const dungeonFilter = Array.from(
+        new Set(sanitizeArray(raw.recommendationDungeonIds).filter((id) => dungeonIdSet.has(id)))
+      );
+      if (dungeonFilter.length) next.recommendationDungeonIds = dungeonFilter;
+      const typeFilter = Array.from(
+        new Set(sanitizeArray(raw.filterType).filter((v) => typeSet.has(v)))
+      );
+      if (typeFilter.length) next.filterType = typeFilter;
       return next;
     };
 
@@ -103,6 +115,9 @@
           if (restored.filterS2) state.filterS2.value = restored.filterS2;
           if (restored.filterS3) state.filterS3.value = restored.filterS3;
           if (restored.filterRarity) state.filterRarity.value = restored.filterRarity;
+          if (restored.filterType) state.filterType.value = restored.filterType;
+          if (restored.recommendationDungeonIds)
+            state.recommendationDungeonIds.value = restored.recommendationDungeonIds;
         }
       }
     } catch (error) {
@@ -213,6 +228,8 @@
       filterS2: state.filterS2.value,
       filterS3: state.filterS3.value,
       filterRarity: state.filterRarity.value,
+      filterType: state.filterType.value,
+      recommendationDungeonIds: state.recommendationDungeonIds.value,
       mobilePanel: state.mobilePanel.value,
     }));
 
